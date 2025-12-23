@@ -8,21 +8,22 @@ type t = Nt.t
 
 let _log = Myconfig._log_preprocess
 
-let constraint_cty_type_check (ctx : t ctx) (bc : BC.bc) ({ phi; nty } : t cty)
-    =
-  let ctx = add_to_right ctx default_v#:nty in
-  let bc, phi = constraint_prop_type_check ctx bc phi in
-  (bc, { nty; phi })
+let constraint_cty_type_check (ctx : t ctx) (bc : BC.bc)
+    ({ phi; nty; eqv } : t cty) =
+  match eqv with
+  | None ->
+      let ctx = add_to_right ctx default_v#:nty in
+      let bc, phi = constraint_prop_type_check ctx bc phi in
+      (bc, { nty; phi; eqv = None })
+  | _ -> _die_with [%here] "eqv unimpl"
 
 let constraint_rty_type_check (ctx : t ctx) (bc : BC.bc) (rty : t rty) =
   let rec aux ctx bc rty =
     let () = _log @@ fun _ -> Printf.printf "rty: %s\n" (layout_rty rty) in
     match rty with
-    | RtyBase { eqv = Some _; _ } ->
-        _die_with [%here] "eqv relation not supported"
-    | RtyBase { ou; cty; _ } ->
+    | RtyBase { ou; cty } ->
         let bc, cty = constraint_cty_type_check ctx bc cty in
-        (bc, RtyBase { ou; cty; eqv = None })
+        (bc, RtyBase { ou; cty })
     | RtyArr { argrty; arg; retty } ->
         let bc, argrty = aux ctx bc argrty in
         let argnty = erase_rty argrty in

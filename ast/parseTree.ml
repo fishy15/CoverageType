@@ -98,11 +98,13 @@ type type_decl =
 (* NOTE: v is default variable *)
 let default_v = "v"
 
-type 't cty = { nty : Nt.nt; phi : 't prop } [@@deriving eq, ord, show, sexp]
+type 't cty = { nty : Nt.nt; phi : 't prop; eqv : string option }
+[@@deriving eq, ord, show, sexp]
+
 type ou = Over | Under [@@deriving eq, ord, show, sexp]
 
 type 't rty =
-  | RtyBase of { ou : ou; cty : 't cty; eqv : string option }
+  | RtyBase of { ou : ou; cty : 't cty }
   | RtyArr of { argrty : 't rty; arg : (string[@bound]); retty : 't rty }
   | RtyPolyType of { pt : string; rty : 't rty }
   | RtyPolyPred of { pred : ('t, string) typed; rty : 't rty }

@@ -9,32 +9,28 @@ open Sugar
 
 let rec axiom_to_expr (axiom : Nt.t prop) =
   match axiom with
-  | 
-   | Lit lit -> (layout_typed_lit lit, true)
-    | Implies (p1, p2) ->
-        (spf "%s %s %s" (p_layout p1) sym_implies (p_layout p2), false)
-    | And [ p ] -> layout p
-    | Or [ p ] -> layout p
-    | And [ p1; p2 ] -> (spf "%s%s%s" (p_layout p1) sym_and (p_layout p2), false)
-    | Or [ p1; p2 ] -> (spf "%s%s%s" (p_layout p1) sym_or (p_layout p2), false)
-    | And ps -> (spf "%s" @@ List.split_by sym_and p_layout ps, false)
-    | Or ps -> (spf "%s" @@ List.split_by sym_or p_layout ps, false)
-    | Not p -> (spf "%s%s" sym_not (p_layout p), true)
-    | Iff (p1, p2) -> (spf "%s %s %s" (p_layout p1) sym_iff (p_layout p2), false)
-    | Ite (p1, p2, p3) ->
-        ( spf "if %s then %s else %s"
-            (fst @@ layout p1)
-            (fst @@ layout p2)
-            (fst @@ layout p3),
-          false )
-    | Forall { qv; body } ->
-        (spf "%s%s, %s" sym_forall (layout_typedid qv) (p_layout body), false)
-    | Exists { qv; body } ->
-        (spf "%s%s, %s" sym_exists (layout_typedid qv) (p_layout body), false)
-
-
-  | Forall {qv; }
-  | Err -> mk_construct ("Err", [])
+  | Lit lit -> (layout_typed_lit lit, true)
+  | Implies (p1, p2) ->
+      (spf "%s %s %s" (p_layout p1) sym_implies (p_layout p2), false)
+  | And [ p ] -> layout p
+  | Or [ p ] -> layout p
+  | And [ p1; p2 ] -> (spf "%s%s%s" (p_layout p1) sym_and (p_layout p2), false)
+  | Or [ p1; p2 ] -> (spf "%s%s%s" (p_layout p1) sym_or (p_layout p2), false)
+  | And ps -> (spf "%s" @@ List.split_by sym_and p_layout ps, false)
+  | Or ps -> (spf "%s" @@ List.split_by sym_or p_layout ps, false)
+  | Not p -> (spf "%s%s" sym_not (p_layout p), true)
+  | Iff (p1, p2) -> (spf "%s %s %s" (p_layout p1) sym_iff (p_layout p2), false)
+  | Ite (p1, p2, p3) ->
+      ( spf "if %s then %s else %s"
+          (fst @@ layout p1)
+          (fst @@ layout p2)
+          (fst @@ layout p3),
+        false )
+  | Forall { qv; body } ->
+      (spf "%s%s, %s" sym_forall (layout_typedid qv) (p_layout body), false)
+  | Exists { qv; body } ->
+      (spf "%s%s, %s" sym_exists (layout_typedid qv) (p_layout body), false)
+  | Forall { qv } | Err -> mk_construct ("Err", [])
   | Tuple es ->
       desc_to_ocamlexpr @@ Pexp_tuple (List.map typed_axiom_to_expr es)
   | Var var -> typed_to_expr mkvar var

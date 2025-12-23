@@ -16,15 +16,21 @@ let layout_vs qt uqvs =
 
 let layout_prop_ = layout_prop
 
-let smart_dependent_forall (x, { nty; phi }) query =
-  let phi = subst_prop_instance default_v (AVar x#:nty) phi in
-  smart_forall_phi (x#:nty, phi) query
+let smart_dependent_forall (x, { nty; phi; eqv }) query =
+  match eqv with
+  | None ->
+      let phi = subst_prop_instance default_v (AVar x#:nty) phi in
+      smart_forall_phi (x#:nty, phi) query
+  | _ -> _die_with [%here] "eqv unimpl"
 
-let smart_dependent_exists (x, { nty; phi }) query =
-  let phi = subst_prop_instance default_v (AVar x#:nty) phi in
-  (* let query = fresh_name_prop query in *)
-  (* Exists { qv = x#:nty; body = smart_add_to phi query } *)
-  smart_exists_phi (x#:nty, phi) query
+let smart_dependent_exists (x, { nty; phi; eqv }) query =
+  match eqv with
+  | None ->
+      let phi = subst_prop_instance default_v (AVar x#:nty) phi in
+      (* let query = fresh_name_prop query in *)
+      (* Exists { qv = x#:nty; body = smart_add_to phi query } *)
+      smart_exists_phi (x#:nty, phi) query
+  | _ -> _die_with [%here] "eqv unimpl"
 
 let report_unclosed loc query =
   let fvs = fv_prop query in
@@ -75,14 +81,10 @@ let sub_cty ou rctx cty1 cty2 =
   let () =
     _log_auxtyping @@ fun _ ->
     let overctx =
-      List.map
-        (fun (x, cty) -> x#:(RtyBase { ou = Over; cty; eqv = None }))
-        overctx
+      List.map (fun (x, cty) -> x#:(RtyBase { ou = Over; cty })) overctx
     in
     let underctx =
-      List.map
-        (fun (x, cty) -> x#:(RtyBase { ou = Under; cty; eqv = None }))
-        underctx
+      List.map (fun (x, cty) -> x#:(RtyBase { ou = Under; cty })) underctx
     in
     let ctx' = Typectx.ctx_from_list (overctx @ underctx) in
     Typectx.pprint_ctx layout_rty ctx';
@@ -106,7 +108,7 @@ let sub_cty ou rctx cty1 cty2 =
       Printf.printf
         "right-hand-side type %s\n\
         \ %s should be closed under over + under ctx: [ %s ]\n"
-        (layout_rty (RtyBase { ou; cty = cty2; eqv = None }))
+        (layout_rty (RtyBase { ou; cty = cty2 }))
         (StrList.to_string (fv_cty_id cty2))
         (StrList.to_string dom);
       _die [%here])
@@ -163,14 +165,10 @@ let non_emptiness_cty rctx cty =
     let () =
       _log_auxtyping @@ fun _ ->
       let overctx =
-        List.map
-          (fun (x, cty) -> x#:(RtyBase { ou = Over; cty; eqv = None }))
-          overctx
+        List.map (fun (x, cty) -> x#:(RtyBase { ou = Over; cty })) overctx
       in
       let underctx =
-        List.map
-          (fun (x, cty) -> x#:(RtyBase { ou = Under; cty; eqv = None }))
-          underctx
+        List.map (fun (x, cty) -> x#:(RtyBase { ou = Under; cty })) underctx
       in
       let ctx' = Typectx.ctx_from_list (overctx @ underctx) in
       Typectx.pprint_ctx layout_rty ctx';

@@ -14,26 +14,29 @@ let _simp_prop p =
     res
   else p
 
-let exists_cty (x : string) ({ nty; phi } : 't cty) (cty : 't cty) : 't cty =
-  if Nt.equal_nt Nt.unit_ty nty then { cty with phi = smart_add_to phi cty.phi }
-  else
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-    let phi = subst_prop_instance default_v (AVar x#:nty) phi in
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-    let phi, cty_phi = map2 _simp_prop (phi, cty.phi) in
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-    let phi =
-      if if_opt then smart_exists [ x#:nty ] (smart_add_to phi cty_phi)
-      else Exists { qv = x#:nty; body = smart_add_to phi cty_phi }
-    in
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-    let phi = if if_opt then SimplProp.simpl_query_by_eq phi else phi in
-    { cty with phi }
+let exists_cty (x : string) ({ nty; phi; eqv } : 't cty) (cty : 't cty) : 't cty
+    =
+  match eqv with
+  | None ->
+      if Nt.equal_nt Nt.unit_ty nty then
+        { cty with phi = smart_add_to phi cty.phi }
+      else
+        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+        let phi = subst_prop_instance default_v (AVar x#:nty) phi in
+        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+        let phi, cty_phi = map2 _simp_prop (phi, cty.phi) in
+        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+        let phi =
+          if if_opt then smart_exists [ x#:nty ] (smart_add_to phi cty_phi)
+          else Exists { qv = x#:nty; body = smart_add_to phi cty_phi }
+        in
+        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+        let phi = if if_opt then SimplProp.simpl_query_by_eq phi else phi in
+        { cty with phi }
+  | _ -> _die_with [%here] "eqv unimpl"
 
 let exists_rty (x : string) (xrty : 't rty) (rty : 't rty) : 't rty =
   match xrty with
-  | RtyBase { eqv = Some _; _ } ->
-      _die_with [%here] "eqv relations not supported"
   | RtyBase { ou = Under; cty = xcty; _ } ->
       let dom =
         List.filter (fun var -> not @@ String.equal x var)
@@ -41,11 +44,9 @@ let exists_rty (x : string) (xrty : 't rty) (rty : 't rty) : 't rty =
       in
       let rec aux (rty : 't rty) : 't rty =
         match rty with
-        | RtyBase { eqv = Some _; _ } ->
-            _die_with [%here] "eqv relations not supported"
         | RtyBase { ou = Over; _ } -> rty
         | RtyBase { ou = Under; cty; _ } ->
-            RtyBase { ou = Under; cty = exists_cty x xcty cty; eqv = None }
+            RtyBase { ou = Under; cty = exists_cty x xcty cty }
         | RtyArr { argrty; arg; retty } ->
             RtyArr { argrty = aux argrty; arg; retty = aux retty }
         | RtyPolyPred _ | RtyPolyType _ -> _die [%here]
@@ -64,9 +65,7 @@ let exists_rty (x : string) (xrty : 't rty) (rty : 't rty) : 't rty =
 
 let exists_rty x rty =
   match x.ty with
-  | RtyBase { eqv = Some _; _ } ->
-      _die_with [%here] "eqv relations not supported"
-  | RtyBase { ou = Under; cty; _ } when Nt.equal_nt Nt.unit_ty cty.nty ->
+  | RtyBase { ou = Under; cty } when Nt.equal_nt Nt.unit_ty cty.nty ->
       _assert [%here] "unit variable cannot be refered"
         (not @@ is_free_rty x.x rty);
       map_rty_retty (exists_cty x.x cty) rty
@@ -76,14 +75,15 @@ let exists_rtys = List.fold_right exists_rty
 
 let n_to_one_ctys prop_f = function
   | [] -> _die [%here]
-  | { nty; phi } :: ctys ->
+  | { nty; phi; eqv = None } :: ctys ->
       if
         List.for_all (function { nty = nty'; _ } -> Nt.equal_nt nty nty') ctys
       then
         let phis = phi :: List.map (function { phi; _ } -> phi) ctys in
         let phis = List.map _simp_prop phis in
-        { nty; phi = prop_f phis }
+        { nty; phi = prop_f phis; eqv = None }
       else _die [%here]
+  | _ -> _die_with [%here] "eqv unimpl"
 
 let union_ctys = n_to_one_ctys smart_or
 
@@ -95,11 +95,10 @@ let rec union_rtys = function
           let ctys =
             List.map
               (function
-                | RtyBase { ou = Under; cty; eqv = None } -> cty
-                | _ -> _die [%here])
+                | RtyBase { ou = Under; cty } -> cty | _ -> _die [%here])
               rtys
           in
-          RtyBase { ou = Under; cty = union_ctys ctys; eqv = None }
+          RtyBase { ou = Under; cty = union_ctys ctys }
       | RtyArr { argrty; _ } when Nt.equal_nt (erase_rty argrty) Nt.unit_ty ->
           let () =
             List.iter (fun rty -> Printf.printf "%s\n" (layout_rty rty)) rtys

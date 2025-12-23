@@ -57,7 +57,7 @@ let type_check_group (bctx : built_in_ctx) =
             List.mapi
               (fun idx x ->
                 match x.ty with
-                | RtyBase { ou = Under; cty = { phi; _ }; eqv = None } ->
+                | RtyBase { ou = Under; cty = { phi; eqv = None; _ } } ->
                     let y =
                       mk_nth_lit [%here] (AVar default_v#:v.ty)#:v.ty idx
                     in
@@ -70,8 +70,7 @@ let type_check_group (bctx : built_in_ctx) =
             RtyBase
               {
                 ou = Under;
-                cty = { nty = v.ty; phi = smart_and phis };
-                eqv = None;
+                cty = { nty = v.ty; phi = smart_and phis; eqv = None };
               }
           in
           let res = Some (VTuple vs)#:rty in
@@ -93,7 +92,7 @@ let type_check_group (bctx : built_in_ctx) =
                       (AAppOp (pred, [ tvar_to_lit default_v#:nty ]))#:Nt
                                                                        .bool_ty
                   in
-                  let rty = cty_to_overrty { nty; phi } in
+                  let rty = cty_to_overrty { nty; phi; eqv = None } in
                   let lamarg = lamarg.x#:rty in
                   let rctx' = Rctx.add_pred rctx pred in
                   let rctx' = Rctx.add_var rctx' lamarg in
@@ -149,7 +148,7 @@ let type_check_group (bctx : built_in_ctx) =
         (* NOTE: we force the first argument to be the decreasing argument *)
         let measure_cty =
           match argrty with
-          | RtyBase { ou = Over; cty; eqv = None } -> cty
+          | RtyBase { ou = Over; cty } -> cty
           | _ ->
               _die_with [%here]
                 "the first parameter of recursive function must be a \
@@ -173,7 +172,7 @@ let type_check_group (bctx : built_in_ctx) =
         (* let () = Printf.printf "fix retty %s\n" (layout_rty retty) in *)
         let rty' =
           let phi = smart_add_to (mk_self_wf_dec fixarg) measure_cty.phi in
-          let argrty = cty_to_overrty { nty = fixarg.ty; phi } in
+          let argrty = cty_to_overrty { nty = fixarg.ty; phi; eqv = None } in
           RtyArr { argrty; arg; retty }
         in
         (* let () = Printf.printf "fix rty' %s\n" (layout_rty rty') in *)
@@ -191,7 +190,7 @@ let type_check_group (bctx : built_in_ctx) =
         (Nt.equal_nt (erase_rty argrty) (erase_rty apparg.ty))
     in
     match argrty with
-    | RtyBase { ou = Over; cty; eqv = None } ->
+    | RtyBase { ou = Over; cty } ->
         let arglit = value_to_lit [%here] apparg.x in
         let retty = subst_rty_instance arg arglit retty in
         let tmp_rty =
@@ -255,16 +254,14 @@ let type_check_group (bctx : built_in_ctx) =
                     phi)
                   vs
               in
-              let cty = { nty = e.ty; phi = smart_and phis } in
-              let rty = RtyBase { ou = Under; cty; eqv = None } in
+              let cty = { nty = e.ty; phi = smart_and phis; eqv = None } in
+              let rty = RtyBase { ou = Under; cty } in
               Some (CRecord vs)#:rty
           | CField { rd; field } ->
               let lit = value_to_lit [%here] rd.x in
               let lit = (AField (lit_to_tlit lit, field))#:e.ty in
               let* rd = value_type_infer rctx rd in
-              let rty =
-                RtyBase { ou = Under; cty = mk_eq_lit_cty lit; eqv = None }
-              in
+              let rty = RtyBase { ou = Under; cty = mk_eq_lit_cty lit } in
               Some (CField { rd; field })#:rty
           | CLetE { rhs; lhs; body } ->
               let* rhs' = term_type_infer rctx rhs in
@@ -430,14 +427,14 @@ let type_check_group (bctx : built_in_ctx) =
         in
         let retty =
           match retty with
-          | RtyBase { ou = Under; cty = { phi; _ }; eqv = None } ->
+          | RtyBase { ou = Under; cty = { phi; _ } } ->
               let phi =
                 subst_prop_instance default_v
                   (value_to_lit [%here] matched.x)
                   phi
               in
               RtyBase
-                { ou = Under; cty = { nty = Nt.unit_ty; phi }; eqv = None }
+                { ou = Under; cty = { nty = Nt.unit_ty; phi; eqv = None } }
           | _ ->
               Printf.printf "retty: %s\n" (layout_rty retty);
               _die [%here]

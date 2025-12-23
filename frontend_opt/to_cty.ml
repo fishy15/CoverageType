@@ -23,10 +23,15 @@ let pprint_phi (phi : 't prop) =
   match res with None -> layout_prop phi | Some c -> layout_constant c
 
 let pprint = function
-  | { nty; phi } ->
+  | { nty; phi; eqv } -> (
       if is_true phi then Nt.layout nty
       else if Nt.equal_nt Nt.unit_ty nty then layout_prop phi
-      else spf "%s:%s | %s" default_v (Nt.layout nty) (layout_prop phi)
+      else
+        match eqv with
+        | Some eqv ->
+            spf "%s:%s / %s | %s" default_v (Nt.layout nty) eqv
+              (layout_prop phi)
+        | None -> spf "%s:%s | %s" default_v (Nt.layout nty) (layout_prop phi))
 
 let layout_ou_bracket ou x =
   match ou with Over -> spf "{%s}" x | Under -> spf "[%s]" x
@@ -34,7 +39,7 @@ let layout_ou_bracket ou x =
 let layout_cty = pprint
 
 let layout_ou_cty ou = function
-  | { nty; phi } ->
+  | { nty; phi; _ } ->
       if is_true phi then layout_ou_bracket ou @@ Nt.layout nty
       else if Nt.equal_nt Nt.unit_ty nty then
         layout_ou_bracket ou (layout_prop phi)
@@ -65,7 +70,21 @@ let vars_phi_of_expr expr =
   let vs, prop = aux expr in
   (List.rev vs, prop)
 
+let eqv_of_expr expr =
+  let* attr =
+    List.find_opt
+      (fun x -> String.equal x.attr_name.txt "eqv")
+      expr.pexp_attributes
+  in
+  match attr.attr_payload with
+  | PStr
+      [ { pstr_desc = Pstr_eval ({ pexp_desc = Pexp_ident ident; _ }, _); _ } ]
+    ->
+      Some (longid_to_id ident)
+  | _ -> _die_with [%here] "equivalence incorrectly formatted"
+
 let cty_of_expr expr =
+  let eqv = eqv_of_expr expr in
   match vars_phi_of_expr expr with
-  | [ { x; ty } ], phi when String.equal x default_v -> { nty = ty; phi }
+  | [ { x; ty } ], phi when String.equal x default_v -> { nty = ty; phi; eqv }
   | _ -> _failatwith [%here] (string_of_expression expr)

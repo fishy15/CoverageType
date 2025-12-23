@@ -147,15 +147,17 @@ and typed_subst_raw_match_case (string_x : string) f
 open Prop
 
 let rec subst_cty (string_x : string) f (cty_e : 't cty) =
-  match cty_e with { nty; phi } -> { nty; phi = subst_prop string_x f phi }
+  match cty_e with
+  | { nty; phi; eqv = None } ->
+      { nty; phi = subst_prop string_x f phi; eqv = None }
+  | _ -> _die_with [%here] "eqv unimpl"
 
 and typed_subst_cty (string_x : string) f (cty_e : ('t, 't cty) typed) =
   cty_e#->(subst_cty string_x f)
 
 let rec subst_rty (string_x : string) f (rty_e : 't rty) =
   match rty_e with
-  | RtyBase { ou; cty; eqv } ->
-      RtyBase { ou; cty = subst_cty string_x f cty; eqv }
+  | RtyBase { ou; cty } -> RtyBase { ou; cty = subst_cty string_x f cty }
   | RtyArr { argrty; arg; retty } ->
       let argrty = subst_rty string_x f argrty in
       if String.equal arg string_x then RtyArr { argrty; arg; retty }
@@ -168,14 +170,16 @@ let rec subst_rty (string_x : string) f (rty_e : 't rty) =
 and typed_subst_rty (string_x : string) f (rty_e : ('t, 't rty) typed) =
   rty_e#->(subst_rty string_x f)
 
-let rename_pred_cty oldname newname { nty; phi } =
-  { nty; phi = rename_pred_prop oldname newname phi }
+let rename_pred_cty oldname newname { nty; phi; eqv } =
+  match eqv with
+  | None -> { nty; phi = rename_pred_prop oldname newname phi; eqv = None }
+  | _ -> _die_with [%here] "eqv unimpl"
 
 let rename_pred_rty oldname newname =
   let rec aux rty_e =
     match rty_e with
-    | RtyBase { ou; cty; eqv } ->
-        RtyBase { ou; cty = rename_pred_cty oldname newname cty; eqv }
+    | RtyBase { ou; cty } ->
+        RtyBase { ou; cty = rename_pred_cty oldname newname cty }
     | RtyArr { argrty; arg; retty } ->
         RtyArr { argrty = aux argrty; arg; retty = aux retty }
     | RtyPolyType { pt; rty } -> RtyPolyType { pt; rty = aux rty }

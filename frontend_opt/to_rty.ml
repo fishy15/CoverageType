@@ -8,12 +8,8 @@ open Ast
 open Sugar
 open To_cty
 
-let layout_qty cty eqv =
-  let eqv = match eqv with None -> "" | Some eqv -> spf " [%s]" eqv in
-  layout_cty cty ^ eqv
-
 let rec layout_rty = function
-  | RtyBase { ou; cty; eqv } -> layout_ou_bracket ou @@ layout_qty cty eqv
+  | RtyBase { ou; cty } -> layout_ou_bracket ou @@ layout_cty cty
   | RtyArr { argrty; arg; retty } ->
       let argrty = layout_rty_bracket argrty in
       let arr = "→" in
@@ -39,30 +35,9 @@ let get_ou expr =
 let base_type_name = Nt._constructor_ty_0 "baseType"
 let _monad = "M"
 
-let eqv_of_expr expr =
-  let* attr =
-    List.find_opt
-      (fun x -> String.equal x.attr_name.txt "eqv")
-      expr.pexp_attributes
-  in
-  match attr.attr_payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ({ pexp_desc = Pexp_ident ident; _ }, _);
-          _;
-        };
-      ] ->
-        Some (longid_to_id ident)
-  | _ -> _die_with [%here] "equivalence incorrectly formatted"
-
 let rec rty_of_expr expr =
   match expr.pexp_desc with
-  | Pexp_constraint _ ->
-      RtyBase
-        { ou = get_ou expr; cty = cty_of_expr expr; eqv = eqv_of_expr expr }
+  | Pexp_constraint _ -> RtyBase { ou = get_ou expr; cty = cty_of_expr expr }
   | Pexp_fun (Asttypes.Nolabel, None, pattern, body) ->
       let param = To_raw_term.typed_id_of_pattern pattern in
       if Nt.equal_nt base_type_name param.ty then

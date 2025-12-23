@@ -129,14 +129,17 @@ and typed_map_raw_match_case (f : 't -> 's)
 open Prop
 
 let rec map_cty (f : 't -> 's) (cty_e : 't cty) =
-  match cty_e with { nty; phi } -> { nty = f nty; phi = map_prop f phi }
+  match cty_e with
+  | { nty; phi; eqv = None } ->
+      { nty = f nty; phi = map_prop f phi; eqv = None }
+  | _ -> _die_with [%here] "eqv unimpl"
 
 and typed_map_cty (f : 't -> 's) (cty_e : ('t, 't cty) typed) =
   cty_e#=>f#->(map_cty f)
 
 let rec map_rty (f : 't -> 's) (rty_e : 't rty) =
   match rty_e with
-  | RtyBase { ou; cty; eqv } -> RtyBase { ou; cty = map_cty f cty; eqv }
+  | RtyBase { ou; cty } -> RtyBase { ou; cty = map_cty f cty }
   | RtyArr { argrty; arg; retty } ->
       RtyArr { argrty = map_rty f argrty; arg; retty = map_rty f retty }
   | RtyPolyType { pt; rty } ->
