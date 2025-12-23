@@ -130,9 +130,7 @@ open Prop
 
 let rec map_cty (f : 't -> 's) (cty_e : 't cty) =
   match cty_e with
-  | { nty; phi; eqv = None } ->
-      { nty = f nty; phi = map_prop f phi; eqv = None }
-  | _ -> _die_with [%here] "eqv unimpl"
+  | { nty; phi; eqv } -> { nty = f nty; phi = map_prop f phi; eqv }
 
 and typed_map_cty (f : 't -> 's) (cty_e : ('t, 't cty) typed) =
   cty_e#=>f#->(map_cty f)

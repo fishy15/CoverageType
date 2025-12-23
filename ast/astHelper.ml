@@ -470,9 +470,8 @@ let is_monadic_fmap x =
 
 let rec fresh_name_rty rty =
   match rty with
-  | RtyBase { ou; cty = { nty; phi; eqv = None } } ->
-      RtyBase { ou; cty = { nty; phi = fresh_name_prop phi; eqv = None } }
-  | RtyBase _ -> _die_with [%here] "eqv unimpl"
+  | RtyBase { ou; cty = { nty; phi; eqv } } ->
+      RtyBase { ou; cty = { nty; phi = fresh_name_prop phi; eqv } }
   | RtyArr { argrty; arg; retty } ->
       let argrty = fresh_name_rty argrty in
       let arg' = Rename.unique_var arg in

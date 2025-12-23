@@ -148,9 +148,7 @@ open Prop
 
 let rec subst_cty (string_x : string) f (cty_e : 't cty) =
   match cty_e with
-  | { nty; phi; eqv = None } ->
-      { nty; phi = subst_prop string_x f phi; eqv = None }
-  | _ -> _die_with [%here] "eqv unimpl"
+  | { nty; phi; eqv } -> { nty; phi = subst_prop string_x f phi; eqv }
 
 and typed_subst_cty (string_x : string) f (cty_e : ('t, 't cty) typed) =
   cty_e#->(subst_cty string_x f)
@@ -171,9 +169,7 @@ and typed_subst_rty (string_x : string) f (rty_e : ('t, 't rty) typed) =
   rty_e#->(subst_rty string_x f)
 
 let rename_pred_cty oldname newname { nty; phi; eqv } =
-  match eqv with
-  | None -> { nty; phi = rename_pred_prop oldname newname phi; eqv = None }
-  | _ -> _die_with [%here] "eqv unimpl"
+  { nty; phi = rename_pred_prop oldname newname phi; eqv }
 
 let rename_pred_rty oldname newname =
   let rec aux rty_e =
