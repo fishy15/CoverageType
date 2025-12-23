@@ -18,9 +18,11 @@ let constraint_rty_type_check (ctx : t ctx) (bc : BC.bc) (rty : t rty) =
   let rec aux ctx bc rty =
     let () = _log @@ fun _ -> Printf.printf "rty: %s\n" (layout_rty rty) in
     match rty with
-    | RtyBase { ou; cty } ->
+    | RtyBase { eqv = Some _; _ } ->
+        _die_with [%here] "eqv relation not supported"
+    | RtyBase { ou; cty; _ } ->
         let bc, cty = constraint_cty_type_check ctx bc cty in
-        (bc, RtyBase { ou; cty })
+        (bc, RtyBase { ou; cty; eqv = None })
     | RtyArr { argrty; arg; retty } ->
         let bc, argrty = aux ctx bc argrty in
         let argnty = erase_rty argrty in

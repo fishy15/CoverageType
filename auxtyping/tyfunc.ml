@@ -32,16 +32,20 @@ let exists_cty (x : string) ({ nty; phi } : 't cty) (cty : 't cty) : 't cty =
 
 let exists_rty (x : string) (xrty : 't rty) (rty : 't rty) : 't rty =
   match xrty with
-  | RtyBase { ou = Under; cty = xcty } ->
+  | RtyBase { eqv = Some _; _ } ->
+      _die_with [%here] "eqv relations not supported"
+  | RtyBase { ou = Under; cty = xcty; _ } ->
       let dom =
         List.filter (fun var -> not @@ String.equal x var)
         @@ fv_rty_id rty @ fv_rty_id xrty
       in
       let rec aux (rty : 't rty) : 't rty =
         match rty with
+        | RtyBase { eqv = Some _; _ } ->
+            _die_with [%here] "eqv relations not supported"
         | RtyBase { ou = Over; _ } -> rty
-        | RtyBase { ou = Under; cty } ->
-            RtyBase { ou = Under; cty = exists_cty x xcty cty }
+        | RtyBase { ou = Under; cty; _ } ->
+            RtyBase { ou = Under; cty = exists_cty x xcty cty; eqv = None }
         | RtyArr { argrty; arg; retty } ->
             RtyArr { argrty = aux argrty; arg; retty = aux retty }
         | RtyPolyPred _ | RtyPolyType _ -> _die [%here]
@@ -60,7 +64,9 @@ let exists_rty (x : string) (xrty : 't rty) (rty : 't rty) : 't rty =
 
 let exists_rty x rty =
   match x.ty with
-  | RtyBase { ou = Under; cty } when Nt.equal_nt Nt.unit_ty cty.nty ->
+  | RtyBase { eqv = Some _; _ } ->
+      _die_with [%here] "eqv relations not supported"
+  | RtyBase { ou = Under; cty; _ } when Nt.equal_nt Nt.unit_ty cty.nty ->
       _assert [%here] "unit variable cannot be refered"
         (not @@ is_free_rty x.x rty);
       map_rty_retty (exists_cty x.x cty) rty
@@ -89,10 +95,11 @@ let rec union_rtys = function
           let ctys =
             List.map
               (function
-                | RtyBase { ou = Under; cty } -> cty | _ -> _die [%here])
+                | RtyBase { ou = Under; cty; eqv = None } -> cty
+                | _ -> _die [%here])
               rtys
           in
-          RtyBase { ou = Under; cty = union_ctys ctys }
+          RtyBase { ou = Under; cty = union_ctys ctys; eqv = None }
       | RtyArr { argrty; _ } when Nt.equal_nt (erase_rty argrty) Nt.unit_ty ->
           let () =
             List.iter (fun rty -> Printf.printf "%s\n" (layout_rty rty)) rtys

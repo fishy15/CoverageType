@@ -75,10 +75,14 @@ let sub_cty ou rctx cty1 cty2 =
   let () =
     _log_auxtyping @@ fun _ ->
     let overctx =
-      List.map (fun (x, cty) -> x#:(RtyBase { ou = Over; cty })) overctx
+      List.map
+        (fun (x, cty) -> x#:(RtyBase { ou = Over; cty; eqv = None }))
+        overctx
     in
     let underctx =
-      List.map (fun (x, cty) -> x#:(RtyBase { ou = Under; cty })) underctx
+      List.map
+        (fun (x, cty) -> x#:(RtyBase { ou = Under; cty; eqv = None }))
+        underctx
     in
     let ctx' = Typectx.ctx_from_list (overctx @ underctx) in
     Typectx.pprint_ctx layout_rty ctx';
@@ -102,7 +106,7 @@ let sub_cty ou rctx cty1 cty2 =
       Printf.printf
         "right-hand-side type %s\n\
         \ %s should be closed under over + under ctx: [ %s ]\n"
-        (layout_rty (RtyBase { ou; cty = cty2 }))
+        (layout_rty (RtyBase { ou; cty = cty2; eqv = None }))
         (StrList.to_string (fv_cty_id cty2))
         (StrList.to_string dom);
       _die [%here])
@@ -159,10 +163,14 @@ let non_emptiness_cty rctx cty =
     let () =
       _log_auxtyping @@ fun _ ->
       let overctx =
-        List.map (fun (x, cty) -> x#:(RtyBase { ou = Over; cty })) overctx
+        List.map
+          (fun (x, cty) -> x#:(RtyBase { ou = Over; cty; eqv = None }))
+          overctx
       in
       let underctx =
-        List.map (fun (x, cty) -> x#:(RtyBase { ou = Under; cty })) underctx
+        List.map
+          (fun (x, cty) -> x#:(RtyBase { ou = Under; cty; eqv = None }))
+          underctx
       in
       let ctx' = Typectx.ctx_from_list (overctx @ underctx) in
       Typectx.pprint_ctx layout_rty ctx';

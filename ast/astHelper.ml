@@ -114,7 +114,7 @@ let id_to_term v = value_to_term @@ id_to_value v
 let map_rty_retty f rty =
   let rec aux rty =
     match rty with
-    | RtyBase { ou; cty } -> RtyBase { ou; cty = f cty }
+    | RtyBase { ou; cty; eqv } -> RtyBase { ou; cty = f cty; eqv }
     | RtyArr { argrty; arg; retty } -> RtyArr { argrty; arg; retty = aux retty }
     | RtyPolyType { pt; rty } -> RtyPolyType { pt; rty = aux rty }
     | RtyPolyPred { pred; rty } -> RtyPolyPred { pred; rty = aux rty }
@@ -231,8 +231,8 @@ let is_under_base_rty rty =
   match get_ou_rty rty with Some Under -> true | _ -> false
 
 let destruct_base_rty = function
-  | RtyBase { ou; cty } -> (ou, cty)
-  | _ -> failwith "assume_base_rty"
+  | RtyBase { ou; cty; eqv = None } -> (ou, cty)
+  | _ -> failwith "assume_base_rty with no eqv"
 
 let destruct_arr_rty loc = function
   | RtyArr { argrty; arg; retty } -> (argrty, arg, retty)
@@ -266,8 +266,8 @@ let get_rty_by_name (item_e : 't item list) (x : string) =
 
 let mk_top_cty nty = { nty; phi = Prop.mk_true }
 let mk_bot_cty nty = { nty; phi = Prop.mk_false }
-let cty_to_overrty cty = RtyBase { ou = Over; cty }
-let cty_to_underrty cty = RtyBase { ou = Under; cty }
+let cty_to_overrty cty = RtyBase { ou = Over; cty; eqv = None }
+let cty_to_underrty cty = RtyBase { ou = Under; cty; eqv = None }
 
 let mk_top_overrty nty =
   if Nt.is_base_tp nty then cty_to_overrty @@ mk_top_cty nty else _die [%here]
@@ -292,7 +292,7 @@ let rec mk_bot_underrty nty =
   | _ -> cty_to_underrty @@ mk_bot_cty nty
 
 let mk_unit_underrty phi =
-  RtyBase { ou = Under; cty = { nty = Nt.unit_ty; phi } }
+  RtyBase { ou = Under; cty = { nty = Nt.unit_ty; phi }; eqv = None }
 
 open Prop
 
@@ -315,20 +315,31 @@ let mk_eq_c_prop c =
 let mk_eq_lit_cty x = { nty = x.ty; phi = mk_eq_lit_prop x }
 let mk_eq_tvar_cty x = { nty = x.ty; phi = mk_eq_var_prop x }
 let mk_eq_c_cty c = { nty = constant_to_nt c; phi = mk_eq_c_prop c }
-let mk_eq_tvar_overrty x = RtyBase { ou = Over; cty = mk_eq_tvar_cty x }
-let mk_eq_tvar_underrty x = RtyBase { ou = Under; cty = mk_eq_tvar_cty x }
-let mk_eq_c_overrty x = RtyBase { ou = Over; cty = mk_eq_c_cty x }
-let mk_eq_c_underrty x = RtyBase { ou = Under; cty = mk_eq_c_cty x }
-let mk_eq_lit_underrty x = RtyBase { ou = Under; cty = mk_eq_lit_cty x }
+
+let mk_eq_tvar_overrty x =
+  RtyBase { ou = Over; cty = mk_eq_tvar_cty x; eqv = None }
+
+let mk_eq_tvar_underrty x =
+  RtyBase { ou = Under; cty = mk_eq_tvar_cty x; eqv = None }
+
+let mk_eq_c_overrty x = RtyBase { ou = Over; cty = mk_eq_c_cty x; eqv = None }
+let mk_eq_c_underrty x = RtyBase { ou = Under; cty = mk_eq_c_cty x; eqv = None }
+
+let mk_eq_lit_underrty x =
+  RtyBase { ou = Under; cty = mk_eq_lit_cty x; eqv = None }
 
 let as_under_base_rty loc = function
-  | RtyBase { ou = Under; cty } -> cty
+  | RtyBase { ou = Under; cty; eqv = None } -> cty
   | _ -> _die loc
 
 let flip_rty rty =
   match rty with
-  | RtyBase { ou = Over; cty } -> RtyBase { ou = Under; cty }
-  | RtyBase { ou = Under; cty } -> RtyBase { ou = Over; cty }
+  | RtyBase { eqv = Some _; _ } ->
+      _die_with [%here] "eqv relations not supported"
+  | RtyBase { ou = Over; cty; eqv = None } ->
+      RtyBase { ou = Under; cty; eqv = None }
+  | RtyBase { ou = Under; cty; eqv = None } ->
+      RtyBase { ou = Over; cty; eqv = None }
   | _ -> rty
 
 (** Denormalize *)
@@ -470,8 +481,8 @@ let is_monadic_fmap x =
 
 let rec fresh_name_rty rty =
   match rty with
-  | RtyBase { ou; cty = { nty; phi } } ->
-      RtyBase { ou; cty = { nty; phi = fresh_name_prop phi } }
+  | RtyBase { ou; cty = { nty; phi }; eqv } ->
+      RtyBase { ou; cty = { nty; phi = fresh_name_prop phi }; eqv }
   | RtyArr { argrty; arg; retty } ->
       let argrty = fresh_name_rty argrty in
       let arg' = Rename.unique_var arg in
@@ -495,8 +506,8 @@ let rename_pred_cty oldname newname { nty; phi } =
 
 let rec rename_pred_rty oldname newname rty =
   match rty with
-  | RtyBase { ou; cty } ->
-      RtyBase { ou; cty = rename_pred_cty oldname newname cty }
+  | RtyBase { ou; cty; eqv } ->
+      RtyBase { ou; cty = rename_pred_cty oldname newname cty; eqv }
   | RtyArr { argrty; arg; retty } ->
       let argrty = rename_pred_rty oldname newname argrty in
       let retty = rename_pred_rty oldname newname retty in

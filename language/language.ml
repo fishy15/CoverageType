@@ -19,8 +19,10 @@ let rec is_wf_rty (over_ctx, under_ctx) = function
 
 and wf_ctx_add (over_ctx, under_ctx) { x; ty } =
   match ty with
-  | RtyBase { ou = Over; cty } -> (over_ctx @ [ (x, cty) ], under_ctx)
-  | RtyBase { ou = Under; cty } -> (over_ctx, under_ctx @ [ (x, cty) ])
+  | RtyBase { eqv = Some _; _ } ->
+      _die_with [%here] "eqv relations not supported"
+  | RtyBase { ou = Over; cty; _ } -> (over_ctx @ [ (x, cty) ], under_ctx)
+  | RtyBase { ou = Under; cty; _ } -> (over_ctx, under_ctx @ [ (x, cty) ])
   | RtyArr _ -> (over_ctx, under_ctx)
   | RtyPolyPred _ -> (over_ctx, under_ctx)
   | RtyPolyType _ ->

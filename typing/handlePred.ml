@@ -63,9 +63,15 @@ let instantiate_prop (p, sol) =
 let instantiate_rty (p, sol) =
   let rec aux rty =
     match rty with
-    | RtyBase { ou; cty } ->
+    | RtyBase { eqv = Some _; _ } ->
+        _die_with [%here] "eqv relations not supported"
+    | RtyBase { ou; cty; _ } ->
         RtyBase
-          { ou; cty = { cty with phi = instantiate_prop (p, sol) cty.phi } }
+          {
+            ou;
+            cty = { cty with phi = instantiate_prop (p, sol) cty.phi };
+            eqv = None;
+          }
     | RtyArr { argrty; arg; retty } ->
         RtyArr { argrty = aux argrty; arg; retty = aux retty }
     | RtyPolyType _ | RtyPolyPred _ -> _die [%here]

@@ -136,7 +136,7 @@ and typed_map_cty (f : 't -> 's) (cty_e : ('t, 't cty) typed) =
 
 let rec map_rty (f : 't -> 's) (rty_e : 't rty) =
   match rty_e with
-  | RtyBase { ou; cty } -> RtyBase { ou; cty = map_cty f cty }
+  | RtyBase { ou; cty; eqv } -> RtyBase { ou; cty = map_cty f cty; eqv }
   | RtyArr { argrty; arg; retty } ->
       RtyArr { argrty = map_rty f argrty; arg; retty = map_rty f retty }
   | RtyPolyType { pt; rty } ->

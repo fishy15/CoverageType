@@ -154,7 +154,8 @@ and typed_subst_cty (string_x : string) f (cty_e : ('t, 't cty) typed) =
 
 let rec subst_rty (string_x : string) f (rty_e : 't rty) =
   match rty_e with
-  | RtyBase { ou; cty } -> RtyBase { ou; cty = subst_cty string_x f cty }
+  | RtyBase { ou; cty; eqv } ->
+      RtyBase { ou; cty = subst_cty string_x f cty; eqv }
   | RtyArr { argrty; arg; retty } ->
       let argrty = subst_rty string_x f argrty in
       if String.equal arg string_x then RtyArr { argrty; arg; retty }
@@ -173,8 +174,8 @@ let rename_pred_cty oldname newname { nty; phi } =
 let rename_pred_rty oldname newname =
   let rec aux rty_e =
     match rty_e with
-    | RtyBase { ou; cty } ->
-        RtyBase { ou; cty = rename_pred_cty oldname newname cty }
+    | RtyBase { ou; cty; eqv } ->
+        RtyBase { ou; cty = rename_pred_cty oldname newname cty; eqv }
     | RtyArr { argrty; arg; retty } ->
         RtyArr { argrty = aux argrty; arg; retty = aux retty }
     | RtyPolyType { pt; rty } -> RtyPolyType { pt; rty = aux rty }

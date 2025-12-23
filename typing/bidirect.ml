@@ -57,7 +57,7 @@ let type_check_group (bctx : built_in_ctx) =
             List.mapi
               (fun idx x ->
                 match x.ty with
-                | RtyBase { ou = Under; cty = { phi; _ } } ->
+                | RtyBase { ou = Under; cty = { phi; _ }; eqv = None } ->
                     let y =
                       mk_nth_lit [%here] (AVar default_v#:v.ty)#:v.ty idx
                     in
@@ -67,7 +67,12 @@ let type_check_group (bctx : built_in_ctx) =
               vs
           in
           let rty =
-            RtyBase { ou = Under; cty = { nty = v.ty; phi = smart_and phis } }
+            RtyBase
+              {
+                ou = Under;
+                cty = { nty = v.ty; phi = smart_and phis };
+                eqv = None;
+              }
           in
           let res = Some (VTuple vs)#:rty in
           pprint_typing_infer_value_after rctx (v, res);
@@ -144,7 +149,7 @@ let type_check_group (bctx : built_in_ctx) =
         (* NOTE: we force the first argument to be the decreasing argument *)
         let measure_cty =
           match argrty with
-          | RtyBase { ou = Over; cty } -> cty
+          | RtyBase { ou = Over; cty; eqv = None } -> cty
           | _ ->
               _die_with [%here]
                 "the first parameter of recursive function must be a \
@@ -186,7 +191,7 @@ let type_check_group (bctx : built_in_ctx) =
         (Nt.equal_nt (erase_rty argrty) (erase_rty apparg.ty))
     in
     match argrty with
-    | RtyBase { ou = Over; cty } ->
+    | RtyBase { ou = Over; cty; eqv = None } ->
         let arglit = value_to_lit [%here] apparg.x in
         let retty = subst_rty_instance arg arglit retty in
         let tmp_rty =
@@ -251,13 +256,15 @@ let type_check_group (bctx : built_in_ctx) =
                   vs
               in
               let cty = { nty = e.ty; phi = smart_and phis } in
-              let rty = RtyBase { ou = Under; cty } in
+              let rty = RtyBase { ou = Under; cty; eqv = None } in
               Some (CRecord vs)#:rty
           | CField { rd; field } ->
               let lit = value_to_lit [%here] rd.x in
               let lit = (AField (lit_to_tlit lit, field))#:e.ty in
               let* rd = value_type_infer rctx rd in
-              let rty = RtyBase { ou = Under; cty = mk_eq_lit_cty lit } in
+              let rty =
+                RtyBase { ou = Under; cty = mk_eq_lit_cty lit; eqv = None }
+              in
               Some (CField { rd; field })#:rty
           | CLetE { rhs; lhs; body } ->
               let* rhs' = term_type_infer rctx rhs in
@@ -423,13 +430,14 @@ let type_check_group (bctx : built_in_ctx) =
         in
         let retty =
           match retty with
-          | RtyBase { ou = Under; cty = { phi; _ } } ->
+          | RtyBase { ou = Under; cty = { phi; _ }; eqv = None } ->
               let phi =
                 subst_prop_instance default_v
                   (value_to_lit [%here] matched.x)
                   phi
               in
-              RtyBase { ou = Under; cty = { nty = Nt.unit_ty; phi } }
+              RtyBase
+                { ou = Under; cty = { nty = Nt.unit_ty; phi }; eqv = None }
           | _ ->
               Printf.printf "retty: %s\n" (layout_rty retty);
               _die [%here]
