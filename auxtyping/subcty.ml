@@ -115,10 +115,6 @@ let sub_cty ou rctx cty1 cty2 =
   in
   let nty = if Nt.equal_nt cty1.nty cty2.nty then cty1.nty else _die [%here] in
   let overctx = (default_v, mk_top_cty nty) :: overctx in
-  print_endline "these are the props:";
-  print_endline (show_prop cty1.phi);
-  print_endline (show_prop cty2.phi);
-  print_endline (show_prop @@ smart_implies cty1.phi cty2.phi);
   let query =
     match (ou, cty1.eqv, cty2.eqv) with
     | Over, None, None ->
@@ -216,16 +212,10 @@ let non_emptiness_cty rctx cty =
           Prover.check_sat (Some rctx.task_name, query))
     in
     let () = Statistic.stat_query_time (rctx.task_name, time) in
-    match cty with
-    | { eqv = None; _ } ->
-        let res =
-          match res with
-          | SmtUnsat -> false
-          | SmtSat _ -> true
-          | Timeout -> true
-          (* NOTE: we cannot decide if this control flow is unreachable, thus continue *)
-        in
-        (* let () = if List.length underctx > 1 then _die [%here] in *)
-        (* let () = if not res then _die [%here] in *)
-        res
-    | _ -> _die_with [%here] "eqv unimpl"
+    let res =
+      match res with SmtUnsat -> false | SmtSat _ -> true | Timeout -> true
+      (* NOTE: we cannot decide if this control flow is unreachable, thus continue *)
+    in
+    (* let () = if List.length underctx > 1 then _die [%here] in *)
+    (* let () = if not res then _die [%here] in *)
+    res
