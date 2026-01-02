@@ -97,6 +97,7 @@ type type_decl =
 
 (* NOTE: v is default variable *)
 let default_v = "v"
+let default_v' = "v'"
 
 type 't cty = { nty : Nt.nt; phi : 't prop; eqv : string option }
 [@@deriving eq, ord, show, sexp]

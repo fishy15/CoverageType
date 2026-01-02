@@ -115,19 +115,38 @@ let sub_cty ou rctx cty1 cty2 =
   in
   let nty = if Nt.equal_nt cty1.nty cty2.nty then cty1.nty else _die [%here] in
   let overctx = (default_v, mk_top_cty nty) :: overctx in
+  print_endline "these are the props:";
+  print_endline (show_prop cty1.phi);
+  print_endline (show_prop cty2.phi);
+  print_endline (show_prop @@ smart_implies cty1.phi cty2.phi);
   let query =
-    match ou with
-    | Over ->
+    match (ou, cty1.eqv, cty2.eqv) with
+    | Over, None, None ->
         let prop = smart_implies cty1.phi cty2.phi in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty1.nty) ])
           prop
-    | Under ->
+    | Under, None, None ->
         let rhs = List.fold_right smart_dependent_exists underctx cty1.phi in
         let prop = smart_implies cty2.phi rhs in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
+    | Under, None, Some eqv ->
+        let underctx = underctx @ [ (default_v', mk_top_cty nty) ] in
+        let phi1' =
+          subst_prop_instance default_v (AVar default_v'#:nty) cty1.phi
+        in
+        let args = List.map tvar_to_lit [ default_v#:nty; default_v'#:nty ] in
+        let functy = Nt.Ty_arrow (nty, Nt.Ty_arrow (nty, Nt.bool_ty)) in
+        let eqv_call = lit_to_prop (AAppOp (eqv#:functy, args)) in
+        let rhs = smart_and [ eqv_call; phi1' ] in
+        let rhs = List.fold_right smart_dependent_exists underctx rhs in
+        let prop = smart_implies cty2.phi rhs in
+        List.fold_right smart_dependent_forall
+          (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
+          prop
+    | _ -> _die_with [%here] "unsupported eqv"
   in
   let () = Statistic.stat_query_formula (rctx.task_name, query) in
   let time, res =
@@ -197,10 +216,16 @@ let non_emptiness_cty rctx cty =
           Prover.check_sat (Some rctx.task_name, query))
     in
     let () = Statistic.stat_query_time (rctx.task_name, time) in
-    let res =
-      match res with SmtUnsat -> false | SmtSat _ -> true | Timeout -> true
-      (* NOTE: we cannot decide if this control flow is unreachable, thus continue *)
-    in
-    (* let () = if List.length underctx > 1 then _die [%here] in *)
-    (* let () = if not res then _die [%here] in *)
-    res
+    match cty with
+    | { eqv = None; _ } ->
+        let res =
+          match res with
+          | SmtUnsat -> false
+          | SmtSat _ -> true
+          | Timeout -> true
+          (* NOTE: we cannot decide if this control flow is unreachable, thus continue *)
+        in
+        (* let () = if List.length underctx > 1 then _die [%here] in *)
+        (* let () = if not res then _die [%here] in *)
+        res
+    | _ -> _die_with [%here] "eqv unimpl"
