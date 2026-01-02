@@ -335,3 +335,7 @@ val pt_ite : pt_term -> pt_term -> pt_term -> pt_term -> bool
 val pt_app : pt_term -> pt_term -> pt_term list -> bool
 val wf_fol_pt_term : pt_term -> bool
 val pt_term_size : pt_term -> int
+
+(** Equivalences *)
+
+val eqv_sort : int list -> int list -> bool

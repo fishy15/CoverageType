@@ -937,3 +937,20 @@ let[@axiom] Herdtool7_literal =
 (* let[@axiom] stlc_const_typing_nat (gamma : stlc_tyctx) (v : stlc_term) *)
 (*     (tau : stlc_ty) = *)
 (*   (is_const v && typing gamma v tau)#==>(stlc_ty_nat tau) *)
+
+(* Equivalence *)
+
+let[@axiom] eqv_definition =
+  fun (l1 : int list) (l2 : int list) -> 
+    iff (eqv_sort l1 l2) (fun (x : int) -> iff (list_mem l1 x) (list_mem l2 x))
+
+let[@axiom] eqv_refl =
+  fun (l : int list) -> eqv_sort l l
+
+let[@axiom] eqv_sym =
+  fun (l1 : int list) (l2 : int list) -> 
+    implies (eqv_sort l1 l2) (eqv_sort l2 l1)
+
+let[@axiom] eqv_trans =
+  fun (l1 : int list) (l2 : int list) (l3 : int list) -> 
+    implies (eqv_sort l1 l2 && eqv_sort l2 l3) (eqv_sort l1 l3)
