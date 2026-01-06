@@ -1,3 +1,4 @@
+open Eqv
 open Language
 open Zutils
 open Zdatatype
@@ -16,29 +17,21 @@ let _simp_prop p =
 
 let exists_cty (x : string) ({ nty; phi; eqv } : 't cty) (cty : 't cty) : 't cty
     =
-  (* let phi = match eqv with *)
-  (* | None -> phi *)
-  (* | Some eqv -> *)
-  (*     let  *)
-  (*     if if_opt then smart_exists [ default_v'#:nty ]  *)
-  match eqv with
-  | None ->
-      if Nt.equal_nt Nt.unit_ty nty then
-        { cty with phi = smart_add_to phi cty.phi }
-      else
-        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-        let phi = subst_prop_instance default_v (AVar x#:nty) phi in
-        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-        let phi, cty_phi = map2 _simp_prop (phi, cty.phi) in
-        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-        let phi =
-          if if_opt then smart_exists [ x#:nty ] (smart_add_to phi cty_phi)
-          else Exists { qv = x#:nty; body = smart_add_to phi cty_phi }
-        in
-        let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
-        let phi = if if_opt then SimplProp.simpl_query_by_eq phi else phi in
-        { cty with phi }
-  | _ -> _die_with [%here] "eqv unimpl"
+  let phi = match eqv with None -> phi | Some eqv -> eqv_to_phi nty phi eqv in
+  if Nt.equal_nt Nt.unit_ty nty then { cty with phi = smart_add_to phi cty.phi }
+  else
+    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let phi = subst_prop_instance default_v (AVar x#:nty) phi in
+    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let phi, cty_phi = map2 _simp_prop (phi, cty.phi) in
+    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let phi =
+      if if_opt then smart_exists [ x#:nty ] (smart_add_to phi cty_phi)
+      else Exists { qv = x#:nty; body = smart_add_to phi cty_phi }
+    in
+    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let phi = if if_opt then SimplProp.simpl_query_by_eq phi else phi in
+    { cty with phi }
 
 let exists_rty (x : string) (xrty : 't rty) (rty : 't rty) : 't rty =
   match xrty with

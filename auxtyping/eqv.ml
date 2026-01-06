@@ -13,4 +13,4 @@ let eqv_prop eqv x y =
 let eqv_to_phi nty phi eqv =
   let phi = subst_prop_instance default_v (AVar default_v'#:nty) phi in
   let eqv_call = eqv_prop eqv default_v#:nty default_v'#:nty in
-  smart_exists_phi (default_v'#:nty, eqv_call) phi
+  fresh_name_prop @@ smart_exists_phi (default_v'#:nty, eqv_call) phi
