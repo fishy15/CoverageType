@@ -16,6 +16,11 @@ let _simp_prop p =
 
 let exists_cty (x : string) ({ nty; phi; eqv } : 't cty) (cty : 't cty) : 't cty
     =
+  (* let phi = match eqv with *)
+  (* | None -> phi *)
+  (* | Some eqv -> *)
+  (*     let  *)
+  (*     if if_opt then smart_exists [ default_v'#:nty ]  *)
   match eqv with
   | None ->
       if Nt.equal_nt Nt.unit_ty nty then

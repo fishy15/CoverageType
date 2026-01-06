@@ -3,8 +3,8 @@
  (name auxtyping)
  (wrapped true)
  (libraries core zutils language statistic)
- (modules subcty subrty tyfunc wellfound auxtyping)
- (preprocess
+ (modules subcty subrty tyfunc wellfound eqv auxtyping)
+   (preprocess
   (pps
    ppx_optcomp
    ppx_compare

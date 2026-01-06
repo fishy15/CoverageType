@@ -1,6 +1,6 @@
+open Eqv
 open Language
 open Zutils
-open Prop
 open Myconfig
 open Zdatatype
 
@@ -129,15 +129,9 @@ let sub_cty ou rctx cty1 cty2 =
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
     | Under, None, Some eqv ->
-        let underctx = underctx @ [ (default_v', mk_top_cty nty) ] in
-        let phi1' =
-          subst_prop_instance default_v (AVar default_v'#:nty) cty1.phi
-        in
-        let args = List.map tvar_to_lit [ default_v#:nty; default_v'#:nty ] in
-        let functy = Nt.Ty_arrow (nty, Nt.Ty_arrow (nty, Nt.bool_ty)) in
-        let eqv_call = lit_to_prop (AAppOp (eqv#:functy, args)) in
-        let rhs = smart_and [ eqv_call; phi1' ] in
-        let rhs = List.fold_right smart_dependent_exists underctx rhs in
+        let underctx = underctx in
+        let phi = eqv_to_phi nty cty1.phi eqv in
+        let rhs = List.fold_right smart_dependent_exists underctx phi in
         let prop = smart_implies cty2.phi rhs in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
