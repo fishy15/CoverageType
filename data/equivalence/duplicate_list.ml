@@ -6,4 +6,11 @@ let[@assert] duplicate_list_gen =
   let x = (true : [%v: int]) [@over] in
   (((list_len v == s && fun (u : int) -> (list_mem v u) #==> (u == x)
     : [%v: int list])
-    [@under]) [@eqv eqv_sort])
+    [@under]) [@eqv eq])
+
+(* let[@assert] duplicate_list_gen = *)
+(*   let s = (v >= 0 : [%v: int]) [@over] in *)
+(*   let x = (true : [%v: int]) [@over] in *)
+(*   (((fun (u : int) -> (list_mem v u) #==> (u == x) *)
+(*     : [%v: int list]) *)
+(*     [@under]) [@eqv eqv_sort]) *)
