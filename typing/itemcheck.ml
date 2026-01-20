@@ -76,6 +76,34 @@ let item_check bctx inv_m imp_m (name, rty) =
       (* let () = _die [%here] in *)
       Fai name
 
+let check_prop_valid name prop =
+  let res = Prover.check_valid (Some name, prop) in
+  match res with
+  | true ->
+      Pp.printf "@{<bold>@{<green>Query %s (%s) is valid.@}@}\n" name
+        (layout_prop prop)
+  | false ->
+      Pp.printf "@{<bold>@{<red>Query %s (%s) is invalid.@}@}\n" name
+        (layout_prop prop)
+
+let check_prop_sat name prop =
+  let res = Prover.check_sat (Some name, prop) in
+  match res with
+  | SmtSat _ ->
+      Pp.printf "@{<bold>@{<green>Query %s (%s) is unsat.@}@}\n" name
+        (layout_prop prop)
+  | _ ->
+      Pp.printf "@{<bold>@{<red>Query %s (%s) is sat.@}@}\n" name
+        (layout_prop prop)
+
+let check_queries _bctx items =
+  let check = function
+    | MCheckValid { name; prop } -> check_prop_valid name prop
+    | MCheckSat { name; prop } -> check_prop_sat name prop
+    | _ -> ()
+  in
+  List.iter check items
+
 let struc_check bctx items =
   let bctx, imp_m = mk_imp_m bctx items in
   let inv_m = mk_invs items in
@@ -98,4 +126,5 @@ let struc_check bctx items =
         _log @@ fun _ -> Pp.printf "@{<bold>@{<yellow>All tasks succeeded@}@}\n"
     | _ -> _log @@ fun _ -> List.iter _task_fail res
   in
+  check_queries bctx items;
   Some bctx

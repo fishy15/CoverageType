@@ -10,9 +10,44 @@ let rec list_gen (lo : int) (hi : int) : int list =
     let (rest : int list) = list_gen (lo + 1) hi in
     choose rest (lo :: rest)
 
-let[@assert] list_gen ?r:(lo : int) ?r:(hi = ((lo <= v : [%v: int]) [@over])) =
+(*
+let[@assert] list_gen ?r:(lo : int) ?r:(hi = ((lo == v : [%v: int]) [@over])) =
   (((fun (x : int) -> (list_mem v x) #==> (lo <= x && x <= hi))
     : [%v: int list]) [@eqv eqv_sort])
+*)
+
+(* ∀lo, (∀v, ((∀x, (list_mem v x => (lo <= x 𐌡 x <= lo))) => (∃v', (eqv_sort v v' 𐌡 (∃_x_12, ((list_len _x_12) == 0 𐌡 (∃_x_13, ((list_len _x_13) == 0 𐌡 (∃_x_14, (hd _x_14 lo 𐌡 tl _x_14 _x_13 𐌡 (v' == _x_12 ᐯ v' == _x_14))))))))))) *)
+
+let[@valid] init =
+	fun (lo : int) (v : int list) (v' : int list) ->
+		(fun (x : int) -> (list_mem v x)#==>(lo <= x && x <= lo))#==>
+		 ((fun (_x_12 : int list) (_x_13 : int list) (_x_14 : int list) -> (list_len _x_12 == 0 && list_len _x_13 == 0 && hd _x_14 lo && tl _x_14 _x_13) && (v' == _x_12 || v' == _x_14))#==>
+			(eqv_sort v v'))
+
+let[@valid] init =
+	fun (lo : int) (v : int list) ->
+    (fun (x : int) -> (list_mem v x)#==>(lo <= x && x <= lo))#==>
+    (fun ((v' [@ex]) : int list) ->
+      eqv_sort v v' &&
+      fun ((_x_12 [@ex]) : int list) ((_x_13 [@ex]) : int list) ((_x_14 [@ex]) : int list) ->
+        list_len _x_12 == 0 &&
+        list_len _x_13 == 0 &&
+        hd _x_14 lo &&
+        tl _x_14 _x_13 &&
+        (v' == _x_12 || v' == _x_14))
+
+let[@valid] init =
+	fun (lo : int) (v : int list) ->
+    ((fun (x : int) -> (list_mem v x)#==>(lo <= x && x <= lo)) && (list_len v > 0))#==>
+    (fun ((v' [@ex]) : int list) ->
+      fun ((_x_13 [@ex]) : int list) ((_x_14 [@ex]) : int list) ->
+        list_len _x_13 == 0 &&
+        hd _x_14 lo &&
+        tl _x_14 _x_13 &&
+        v' == _x_14 &&
+        eqv_sort v v')
+
+let[@valid] init = false
 
 (* let[@assert] list_gen ?r:(lo : int) ?r:(hi = ((lo <= v : [%v: int]) [@over])) = *)
 (*   ((fun (x : int) -> (list_mem v x) #==> (lo <= x && x <= hi)) *)
