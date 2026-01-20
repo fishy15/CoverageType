@@ -339,3 +339,4 @@ val pt_term_size : pt_term -> int
 (** Equivalences *)
 
 val eqv_sort : int list -> int list -> bool
+val eqv_eq : int list -> int list -> bool
