@@ -12,4 +12,4 @@ let rec list_gen (lo : int) (hi : int) : int list =
 
 let[@assert] list_gen ?r:(lo : int) ?r:(hi = ((lo <= v : [%v: int]) [@over])) =
   (((fun (x : int) -> (list_mem v x) #==> (lo <= x && x <= hi))
-    : [%v: int list]) [@eqv eqv_sort])
+    : [%v: int list]) [@eqv eqv_set])

@@ -940,54 +940,42 @@ let[@axiom] Herdtool7_literal =
 
 (* Equivalence *)
 
-let[@axiom] eqv_definition =
+let[@axiom] eqv_set_definition =
   fun (l1 : int list) (l2 : int list) -> 
-    iff (eqv_sort l1 l2) (fun (x : int) -> iff (list_mem l1 x) (list_mem l2 x))
+    iff (eqv_set l1 l2) (fun (x : int) -> iff (list_mem l1 x) (list_mem l2 x))
 
-let[@axiom] eqv_refl =
-  fun (l : int list) -> eqv_sort l l
+let[@axiom] eqv_set_refl =
+  fun (l : int list) -> eqv_set l l
 
-let[@axiom] eqv_sym =
+let[@axiom] eqv_set_sym =
   fun (l1 : int list) (l2 : int list) -> 
-    implies (eqv_sort l1 l2) (eqv_sort l2 l1)
+    implies (eqv_set l1 l2) (eqv_set l2 l1)
 
-let[@axiom] eqv_trans =
+let[@axiom] eqv_set_trans =
   fun (l1 : int list) (l2 : int list) (l3 : int list) -> 
-    implies (eqv_sort l1 l2 && eqv_sort l2 l3) (eqv_sort l1 l3)
+    implies (eqv_set l1 l2 && eqv_set l2 l3) (eqv_set l1 l3)
 
-let[@axiom] eqv_singleton =
+let[@axiom] eqv_set_singleton =
   fun (xs : int list) (n : int) (x1 : int list) (x0 : int list) ->
     ((fun (x : int) -> (list_mem xs x)#==>(x == n)) &&
      hd x1 n &&
      tl x1 x0 &&
      list_len x0 == 0)#==>
-    (eqv_sort xs x1)
+    (eqv_set xs x1)
 
-(* let[@axiom] eqv_len = *)
+(* let[@axiom] eqv_set_len = *)
 (*   fun (n : int) (a : int list) (b : int list) (c : int list) ->  *)
-(*     ((hd a n) && (hd b n) && (tl a b) && (tl b c) && (list_len c == 0))#==>(eqv_sort a b) *)
+(*     ((hd a n) && (hd b n) && (tl a b) && (tl b c) && (list_len c == 0))#==>(eqv_set a b) *)
 
-(* let[@axiom] eqv_extend = *)
+(* let[@axiom] eqv_set_extend = *)
 (*   fun (xs : int list) (h : int) (t : int list) *)
 (*       (ys : int list) (h' : int) (t' : int list) -> *)
-(*     (hd xs h && tl xs t && hd ys h' && tl ys t' && h == h' && eqv_sort t t')#==>(eqv_sort xs ys) *)
+(*     (hd xs h && tl xs t && hd ys h' && tl ys t' && h == h' && eqv_set t t')#==>(eqv_set xs ys) *)
 
 let[@axiom] int_list_induct =
   fun (n : int) (t : int list) ((xs [@exists]) : int list) ->
     hd xs n && tl xs t
 
-let[@axiom] tail_shrink =
-  fun (xs : 'a list) (t : 'a list) ->
-    (tl xs t)#==>((list_len xs) == (list_len t + 1))
-
-let[@axiom] zero_no_tl =
-  fun (l : int list) (t : int list)->
-    (list_len l == 0)#==>(not (tl l t))
-
 let[@axiom] list_mem_empty =
   fun (v : 'a list) (x : 'a) ->
     (list_len v == 0)#==>(not (list_mem v x))
-
-(* let[@axiom] int_list_null = *)
-(*   fun ((xs [@exists]) : int list) -> *)
-(*     list_len xs == 0 *)

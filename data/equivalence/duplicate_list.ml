@@ -3,8 +3,8 @@ let rec duplicate_list_gen (s : int) (x : int) : int list =
 
 (* let[@assert] duplicate_list_gen ?r:(s = ((v > 0 : [%v: int]) [@over])) ?r:(x : int) = *)
 (*   ((fun (u : int) -> (list_mem v u) #==> (u == x) *)
-(*     : [%v: int list]) [@eqv eqv_sort]) *)
+(*     : [%v: int list]) [@eqv eqv_set]) *)
 
 let[@assert] duplicate_list_gen ?r:(s = ((v >= 0 : [%v: int]) [@over])) ?r:(x : int) =
   ((list_len v == s && fun (u : int) -> (list_mem v u) #==> (u == x)
-    : [%v: int list]) [@eqv eqv_sort])
+    : [%v: int list]) [@eqv eqv_set])
