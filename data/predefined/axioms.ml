@@ -955,44 +955,28 @@ let[@axiom] eqv_trans =
   fun (l1 : int list) (l2 : int list) (l3 : int list) -> 
     implies (eqv_sort l1 l2 && eqv_sort l2 l3) (eqv_sort l1 l3)
 
+let[@axiom] eqv_singleton =
+  fun (xs : int list) (n : int) (x1 : int list) (x0 : int list) ->
+    ((fun (x : int) -> (list_mem xs x)#==>(x == n)) &&
+     hd x1 n &&
+     tl x1 x0 &&
+     list_len x0 == 0)#==>
+    (eqv_sort xs x1)
+
 (* let[@axiom] eqv_len = *)
 (*   fun (n : int) (a : int list) (b : int list) (c : int list) ->  *)
 (*     ((hd a n) && (hd b n) && (tl a b) && (tl b c) && (list_len c == 0))#==>(eqv_sort a b) *)
-(**)
-(* let[@axiom] int_list_induct = *)
-(*   fun (n : int) (t : int list) ((xs [@exists]) : int list) -> *)
-(*     hd xs n && tl xs t *)
-(**)
-(* let[@axiom] tail_shrink = *)
-(*   fun (xs : 'a list) (t : 'a list) -> *)
-(*     (tl xs t)#==>((list_len xs) == (list_len t + 1)) *)
-(**)
-(* let[@axiom] zero_no_tl = *)
-(*   fun (l : int list) (t : int list)-> *)
-(*     (list_len l == 0)#==>(not (tl l t)) *)
-(**)
-(* let[@axiom] list_mem_empty = *)
-(*   fun (v : 'a list) (x : 'a) -> *)
-(*     (list_len v == 0)#==>(not (list_mem v x)) *)
-(**)
-(* let[@axiom] int_list_null = *)
-(*   fun ((xs [@exists]) : int list) -> *)
-(*     list_len xs == 0 *)
 
-let[@axiom] list_mem_empty =
-  fun (v : 'a list) (x : 'a) ->
-    (list_len v == 0)#==>(not (list_mem v x))
+(* let[@axiom] eqv_extend = *)
+(*   fun (xs : int list) (h : int) (t : int list) *)
+(*       (ys : int list) (h' : int) (t' : int list) -> *)
+(*     (hd xs h && tl xs t && hd ys h' && tl ys t' && h == h' && eqv_sort t t')#==>(eqv_sort xs ys) *)
 
-
-let[@axiom] eqv_len =
-  fun (n : int) (a : int list) (b : int list) (c : int list) ->
-    ((hd a n) && (hd b n) && (tl a b) && (tl b c) && (list_len c == 0))#==>(eqv_sort a b)
-
-let[@axiom ? chk_axiom, chk_axiom2, chk_axiom3, chk_axiom4, init, init_tmp] int_list_induct =
+let[@axiom] int_list_induct =
   fun (n : int) (t : int list) ((xs [@exists]) : int list) ->
     hd xs n && tl xs t
 
-let[@axiom ? init] tail_shrink =
+let[@axiom] tail_shrink =
   fun (xs : 'a list) (t : 'a list) ->
     (tl xs t)#==>((list_len xs) == (list_len t + 1))
 
@@ -1000,17 +984,10 @@ let[@axiom] zero_no_tl =
   fun (l : int list) (t : int list)->
     (list_len l == 0)#==>(not (tl l t))
 
-let[@axiom] int_list_null =
-  fun ((xs [@exists]) : int list) ->
-    list_len xs == 0
+let[@axiom] list_mem_empty =
+  fun (v : 'a list) (x : 'a) ->
+    (list_len v == 0)#==>(not (list_mem v x))
 
-let[@axiom] eq_refl =
-  fun (x : 'a) -> eqv_eq x x
-
-let[@axiom] eq_sym =
-  fun (x : 'a) (y : 'a) ->
-    implies (eqv_eq x y) (eqv_eq y x)
-
-let[@axiom] eq_trans =
-  fun (x : 'a) (y : 'a) (z : 'a) ->
-    implies (eqv_eq x y && eqv_eq y z) (eqv_eq x z)
+(* let[@axiom] int_list_null = *)
+(*   fun ((xs [@exists]) : int list) -> *)
+(*     list_len xs == 0 *)
