@@ -76,7 +76,7 @@ let mk_tasks items =
       | _ -> None)
     items
 
-type resu = Suc of built_in_ctx | Fai of string
+type resu = Suc of built_in_ctx | Fai
 
 let item_check bctx inv_m imp_m (name, rty) =
   let imp =
@@ -104,7 +104,7 @@ let item_check bctx inv_m imp_m (name, rty) =
   | None ->
       _type_check_fail name;
       (* let () = _die [%here] in *)
-      Fai name
+      Fai
 
 let _check_prop_valid name prop =
   let res = Prover.check_valid (Some name, prop) in
@@ -122,13 +122,9 @@ let check_task bctx inv_m imp_m task =
   match task with
   | TypeCheck (name, rty) -> item_check bctx inv_m imp_m (name, rty)
   | ValidCheck (name, prop) -> (
-      match _check_prop_valid name prop with
-      | true -> Suc bctx
-      | false -> Fai name)
+      match _check_prop_valid name prop with true -> Suc bctx | false -> Fai)
   | SatCheck (name, prop) -> (
-      match _check_prop_sat name prop with
-      | true -> Suc bctx
-      | false -> Fai name)
+      match _check_prop_sat name prop with true -> Suc bctx | false -> Fai)
 
 let struc_check bctx items =
   let bctx, imp_m = mk_imp_m bctx items in
@@ -139,7 +135,7 @@ let struc_check bctx items =
       (fun (bctx, failed) task ->
         match check_task bctx inv_m imp_m task with
         | Suc bctx -> (bctx, failed)
-        | Fai _ -> (bctx, failed @ [ task ]))
+        | Fai -> (bctx, failed @ [ task ]))
       (bctx, []) tasks
   in
   let () =
