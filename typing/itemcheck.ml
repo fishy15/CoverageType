@@ -87,13 +87,13 @@ let check_prop_valid name prop =
         (layout_prop prop)
 
 let check_prop_sat name prop =
-  let res = Prover.check_sat (Some name, prop) in
+  let res = Prover.check_sat_bool (Some name, prop) in
   match res with
-  | SmtSat _ ->
-      Pp.printf "@{<bold>@{<green>Query %s (%s) is unsat.@}@}\n" name
+  | true ->
+      Pp.printf "@{<bold>@{<green>Query %s (%s) is sat.@}@}\n" name
         (layout_prop prop)
-  | _ ->
-      Pp.printf "@{<bold>@{<red>Query %s (%s) is sat.@}@}\n" name
+  | false ->
+      Pp.printf "@{<bold>@{<red>Query %s (%s) is unsat.@}@}\n" name
         (layout_prop prop)
 
 let check_queries _bctx items =
