@@ -5,18 +5,45 @@ open Zdatatype
 
 let _log = Myconfig._log_result
 
-let _task_info name rty =
+type 'a task =
+  | TypeCheck of string * 'a rty
+  | ValidCheck of string * 'a prop
+  | SatCheck of string * 'a prop
+
+let _type_check_info name rty =
   _log @@ fun _ ->
   Pp.printf "@{<bold>Type Check %s:@}\n" name;
   Pp.printf "@{<bold>check against with:@} %s\n" (layout_rty rty)
 
-let _task_succ name =
+let _type_check_succ name =
   _log @@ fun _ ->
   Pp.printf "@{<bold>@{<yellow>Task %s, type check succeeded@}@}\n" name
 
-let _task_fail name =
+let _type_check_fail name =
   _log @@ fun _ ->
   Pp.printf "@{<bold>@{<red>Task %s, type check failed@}@}\n" name
+
+let _valid_succ name prop =
+  Pp.printf "@{<bold>@{<yellow>Query %s (%s) is valid.@}@}\n" name
+    (layout_prop prop)
+
+let _valid_fail name prop =
+  Pp.printf "@{<bold>@{<red>Query %s (%s) is invalid.@}@}\n" name
+    (layout_prop prop)
+
+let _sat_succ name prop =
+  Pp.printf "@{<bold>@{<yellow>Query %s (%s) is sat.@}@}\n" name
+    (layout_prop prop)
+
+let _sat_fail name prop =
+  Pp.printf "@{<bold>@{<red>Query %s (%s) is unsat.@}@}\n" name
+    (layout_prop prop)
+
+let _task_fail task =
+  match task with
+  | TypeCheck (name, _) -> _type_check_fail name
+  | ValidCheck (name, prop) -> _valid_fail name prop
+  | SatCheck (name, prop) -> _sat_fail name prop
 
 let mk_imp_m bctx items =
   List.fold_left
@@ -42,7 +69,10 @@ let mk_invs items =
 let mk_tasks items =
   List.filter_map
     (function
-      | MRty { is_assumption = false; name; rty } -> Some (name, rty)
+      | MRty { is_assumption = false; name; rty } ->
+          Some (TypeCheck (name, rty))
+      | MCheckValid { name; prop } -> Some (ValidCheck (name, prop))
+      | MCheckSat { name; prop } -> Some (SatCheck (name, prop))
       | _ -> None)
     items
 
@@ -60,7 +90,7 @@ let item_check bctx inv_m imp_m (name, rty) =
   let invs = match StrMap.find_opt inv_m name with None -> [] | Some l -> l in
   let sol, rty = instantiate_rty_by_nty [%here] rty imp.ty in
   let invs = List.map (fun x -> x#=>(map_rty (Nt.msubst_nt sol))) invs in
-  let () = _task_info name rty in
+  let () = _type_check_info name rty in
   let time, res =
     clock (fun () ->
         term_type_check bctx (Common.Rctx.emp name [] invs) (imp, rty))
@@ -69,40 +99,36 @@ let item_check bctx inv_m imp_m (name, rty) =
   let () = Statistic.store_stat stat_file in
   match res with
   | Some _ ->
-      _task_succ name;
+      _type_check_succ name;
       Suc (rty_add_to_right bctx name#:rty)
   | None ->
-      _task_fail name;
+      _type_check_fail name;
       (* let () = _die [%here] in *)
       Fai name
 
-let check_prop_valid name prop =
+let _check_prop_valid name prop =
   let res = Prover.check_valid (Some name, prop) in
-  match res with
-  | true ->
-      Pp.printf "@{<bold>@{<green>Query %s (%s) is valid.@}@}\n" name
-        (layout_prop prop)
-  | false ->
-      Pp.printf "@{<bold>@{<red>Query %s (%s) is invalid.@}@}\n" name
-        (layout_prop prop)
+  (match res with
+  | true -> _valid_succ name prop
+  | false -> _valid_fail name prop);
+  res
 
-let check_prop_sat name prop =
+let _check_prop_sat name prop =
   let res = Prover.check_sat_bool (Some name, prop) in
-  match res with
-  | true ->
-      Pp.printf "@{<bold>@{<green>Query %s (%s) is sat.@}@}\n" name
-        (layout_prop prop)
-  | false ->
-      Pp.printf "@{<bold>@{<red>Query %s (%s) is unsat.@}@}\n" name
-        (layout_prop prop)
+  (match res with true -> _sat_succ name prop | false -> _sat_fail name prop);
+  res
 
-let check_queries _bctx items =
-  let check = function
-    | MCheckValid { name; prop } -> check_prop_valid name prop
-    | MCheckSat { name; prop } -> check_prop_sat name prop
-    | _ -> ()
-  in
-  List.iter check items
+let check_task bctx inv_m imp_m task =
+  match task with
+  | TypeCheck (name, rty) -> item_check bctx inv_m imp_m (name, rty)
+  | ValidCheck (name, prop) -> (
+      match _check_prop_valid name prop with
+      | true -> Suc bctx
+      | false -> Fai name)
+  | SatCheck (name, prop) -> (
+      match _check_prop_sat name prop with
+      | true -> Suc bctx
+      | false -> Fai name)
 
 let struc_check bctx items =
   let bctx, imp_m = mk_imp_m bctx items in
@@ -110,10 +136,10 @@ let struc_check bctx items =
   let tasks = mk_tasks items in
   let _, res =
     List.fold_left
-      (fun (bctx, failed) (name, rty) ->
-        match item_check bctx inv_m imp_m (name, rty) with
+      (fun (bctx, failed) task ->
+        match check_task bctx inv_m imp_m task with
         | Suc bctx -> (bctx, failed)
-        | Fai name -> (bctx, failed @ [ name ]))
+        | Fai _ -> (bctx, failed @ [ task ]))
       (bctx, []) tasks
   in
   let () =
@@ -126,5 +152,4 @@ let struc_check bctx items =
         _log @@ fun _ -> Pp.printf "@{<bold>@{<yellow>All tasks succeeded@}@}\n"
     | _ -> _log @@ fun _ -> List.iter _task_fail res
   in
-  check_queries bctx items;
   Some bctx
