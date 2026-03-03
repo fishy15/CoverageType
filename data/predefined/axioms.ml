@@ -143,6 +143,10 @@ let[@axiom] list_tl_unique =
 
 let[@axiom] list_len_geq_zero = fun (l : 'a list) -> list_len l >= 0
 
+let[@axiom] list_unique_nil = fun (l1 : 'a list) (l2 : 'a list) -> (list_len l1 == 0 && list_len l2 == 0)#==>(l1 == l2)
+
+(* let[@axiom] list_nonnil_eq = fun (l1 : 'a list) (l2 : 'a list) (h : a) (t : a' list) -> (hd l1 h && hd l2 h && tl l1 t && tl l2 t)#==>(l1 == l2) *)
+
 (* let[@axiom] list_len_geq_zero_implies_list_ex = *)
 (*  fun (n : int) -> (0 <= n) #==> (fun ((l [@ex]) : 'a list) -> list_len l == n) *)
 
@@ -178,44 +182,75 @@ let[@axiom] list_mem_destruct =
 
 (** Tree *)
 
-let[@axiom] tree_leaf_no_root (l : int tree) (x : int) =
+let[@axiom ? gen_spine] tree_leaf_no_root (l : int tree) (x : int) =
   (depth l == 0)#==>(not (root l x))
 
-let[@axiom] tree_leaf_no_ch (l : int tree) (l1 : int tree) =
+let[@axiom ? gen_spine] tree_leaf_no_ch (l : int tree) (l1 : int tree) =
   (depth l == 0)#==>(not (lch l l1 || rch l l1))
 
-let[@axiom] tree_no_leaf_ex_lch (l : int tree) ((l1 [@ex]) : int tree) =
+let[@axiom ? gen_spine] tree_no_leaf_ex_lch (l : int tree) ((l1 [@ex]) : int tree) =
   (not (depth l == 0))#==>(lch l l1)
 
-let[@axiom] tree_no_leaf_ex_rch (l : int tree) ((l2 [@ex]) : int tree) =
+let[@axiom ? gen_spine] tree_no_leaf_ex_rch (l : int tree) ((l2 [@ex]) : int tree) =
   (not (depth l == 0))#==>(rch l l2)
 
-let[@axiom] tree_no_leaf_ex_root (l : int tree) ((x [@ex]) : int) =
+let[@axiom ? gen_spine] tree_no_leaf_ex_root (l : int tree) ((x [@ex]) : int) =
   (not (depth l == 0))#==>(root l x)
 
-let[@axiom] tree_root_no_leaf (l : int tree) (x : int) =
+let[@axiom ? gen_spine] tree_root_no_leaf (l : int tree) (x : int) =
   (root l x)#==>(not (depth l == 0))
 
-let[@axiom] tree_ch_no_leaf (l : int tree) (l1 : int tree) =
+let[@axiom ? gen_spine] tree_ch_no_leaf (l : int tree) (l1 : int tree) =
   (lch l l1 || rch l l1)#==>(not (depth l == 0))
 
-let[@axiom] tree_depth_geq_0 (l : int tree) (n : int) =
+let[@axiom ? gen_spine] tree_depth_geq_0 (l : int tree) (n : int) =
   (depth l == n)#==>(n >= 0)
 
-let[@axiom] tree_ch_depth_minus_1 (l : int tree) (l1 : int tree) (n : int)
-    (n1 : int) =
-  (lch l l1 || rch l l1)#==>(depth l1 == depth l - 1)
+let[@axiom ? gen_spine] tree_ch_depth_minus_1 (t : int tree) (l : int tree) (r : int tree) =
+  (lch t l && rch t r)#==>((depth t == depth l + 1 || depth t == depth r + 1) && depth t > depth l && depth t > depth r)
+
+let[@axiom ? gen_spine] tree_leaf_cnt_unique (t : int tree) (x : int) (y : int) =
+  (tree_num_leaf t x && tree_num_leaf t y)#==>(x == y)
+
+let[@axiom ? gen_spine] tree_leaf_cnt_1 (t : int tree) =
+  iff (depth t == 0) (tree_num_leaf t 1)
+
+(* let[@axiom ? gen_spine] tree_node_cnt_sum (t : int tree) (l : int tree) (r : int tree) (s : int) (ls : int) (rs : int) = *)
+(*   (lch t l && rch t r && tree_num_leaf t s && tree_num_leaf l ls && tree_num_leaf r rs)#==>(s == ls + rs) *)
+
+let[@axiom ? gen_spine] tree_node_cnt_sum2 (t : int tree) (s : int) =
+  (depth t > 0 && tree_num_leaf t s)#==>
+  (fun ((l [@ex]) : int tree) ((r [@ex]) : int tree) ((ls [@ex]) : int) ((rs [@ex]) : int) ->
+     lch t l && rch t r && tree_num_leaf l ls && tree_num_leaf r rs && s == ls + rs)
+
+let[@axiom ? gen_spine] tree_depth_has_child (t : int tree) =
+  (depth t > 0)#==>(fun ((l [@ex]) : int tree) ((r [@ex]) : int tree) -> lch t l && rch t r)
+
+let[@axiom ? gen_spine] tree_no_mem_leaf (t : int tree) =
+  iff (fun (x : int) -> not (tree_mem t x)) (depth t == 0)
+
+let[@axiom ? gen_spine] tree_single_value (t : int tree) (x : int) =
+  (depth t == 1 && root t x)#==>(fun (y : int) -> (tree_mem t y)#==>(x == y))
+
+let[@axiom ? gen_spine] tree_unique_leaf (t1 : int tree) (t2 : int tree) =
+  (depth t1 == 0 && depth t2 == 0)#==>(t1 == t2)
+
+let[@axiom ? gen_spine] tree_unique_node (t1 : int tree) (t2 : int tree) (l : int tree) (r : int tree) (x : int) =
+  (lch t1 l && rch t1 r && root t1 x && lch t2 l && rch t2 r && root t2 x)#==>(t1 == t2)
 
 (** tree_mem *)
 
-let[@axiom] tree_root_mem (l : int tree) (x : int) =
+let[@axiom ? gen_spine] tree_root_mem (l : int tree) (x : int) =
   (root l x)#==>(tree_mem l x)
 
-let[@axiom] tree_mem_lch_mem (l : int tree) (l1 : int tree) (x : int) =
+let[@axiom ? gen_spine] tree_mem_lch_mem (l : int tree) (l1 : int tree) (x : int) =
   (lch l l1 && tree_mem l1 x)#==>(tree_mem l x)
 
-let[@axiom] tree_mem_rch_mem (l : int tree) (l1 : int tree) (x : int) =
+let[@axiom ? gen_spine] tree_mem_rch_mem (l : int tree) (l1 : int tree) (x : int) =
   (rch l l1 && tree_mem l1 x)#==>(tree_mem l x)
+
+let[@axiom ? gen_spine] tree_depth_0_no_mem (t : 'a tree) (x : int) =
+  (depth t == 0)#==>(not (tree_mem t x))
 
 (** bst *)
 
@@ -955,13 +990,14 @@ let[@axiom] eqv_set_trans =
   fun (l1 : int list) (l2 : int list) (l3 : int list) -> 
     implies (eqv_set l1 l2 && eqv_set l2 l3) (eqv_set l1 l3)
 
-let[@axiom] eqv_set_singleton =
-  fun (xs : int list) (n : int) (x1 : int list) (x0 : int list) ->
-    ((fun (x : int) -> (list_mem xs x)#==>(x == n)) &&
-     hd x1 n &&
-     tl x1 x0 &&
-     list_len x0 == 0)#==>
-    (eqv_set xs x1)
+(* let[@axiom] eqv_set_singleton = *)
+(*   fun (xs : int list) (n : int) (x1 : int list) (x0 : int list) -> *)
+(*     ((fun (x : int) -> (list_mem xs x)#==>(x == n)) && *)
+(*      list_len xs > 0 && *)
+(*      hd x1 n && *)
+(*      tl x1 x0 && *)
+(*      list_len x0 == 0)#==> *)
+(*     (eqv_set xs x1) *)
 
 (* let[@axiom] eqv_set_len = *)
 (*   fun (n : int) (a : int list) (b : int list) (c : int list) ->  *)
@@ -972,10 +1008,63 @@ let[@axiom] eqv_set_singleton =
 (*       (ys : int list) (h' : int) (t' : int list) -> *)
 (*     (hd xs h && tl xs t && hd ys h' && tl ys t' && h == h' && eqv_set t t')#==>(eqv_set xs ys) *)
 
-let[@axiom] int_list_induct =
-  fun (n : int) (t : int list) ((xs [@exists]) : int list) ->
-    hd xs n && tl xs t
+(* let[@axiom] int_list_induct = *)
+(*   fun (n : int) (t : int list) ((xs [@exists]) : int list) -> *)
+(*     hd xs n && tl xs t *)
+
+let[@axiom] int_list_tl =
+  fun (n : int) (xs : int list) (t : int list) ->
+    (list_mem t n && tl xs t)#==>(list_mem xs n)
+
+let[@axiom] int_list_has_tl =
+  fun (xs : int list) ->
+    (list_len xs > 0)#==>(fun ((t [@exists]) : int list) -> tl xs t)
+
+let[@axiom] int_list_has_hd =
+  fun (xs : int list) ->
+    (list_len xs > 0)#==>(fun ((h [@exists]) : int) -> hd xs h)
+
+let[@axiom] int_list_hd_is_mem =
+  fun (xs : int list) (x : int) ->
+    (hd xs x)#==>(list_mem xs x)
+
+let[@axiom] int_tail_len' =
+  fun (xs : int list) (t : int list) (s : int) ->
+    (tl xs t && list_len xs == s)#==>(list_len t == s - 1)
+
+let[@axiom] int_list_mem_tail =
+  fun (l : int list) (t : int list) (x : int) ->
+    (tl l t && list_mem t x)#==>(list_mem l x)
 
 let[@axiom] list_mem_empty =
   fun (v : 'a list) (x : 'a) ->
     (list_len v == 0)#==>(not (list_mem v x))
+
+let[@axiom] eqv_len =
+  fun (n : int) (a : int list) (b : int list) (c : int list) ->
+    ((hd a n) && (hd b n) && (tl a b) && (tl b c) && (list_len c == 0))#==>(eqv_set a b)
+
+let[@axiom] tail_shrink =
+  fun (xs : 'a list) (t : 'a list) ->
+    (tl xs t)#==>((list_len xs) == (list_len t + 1))
+
+(** Tree equivalences *)
+
+(* let[@axiom] eqv_spine_definition = *)
+(*   fun (t1 : 'a btree) (t2 : 'a btree)  -> *)
+(*     iff (eqv_spine t1 t2) *)
+(*       ((btree_leaf t1 && btree_leaf t2) || *)
+(*       (fun (lch1 : 'a btree) (lch2 : 'a btree) (rch1 : 'a btree) (rch2 : 'a btree) -> *)
+(*         (btree_lch t1 lch1 && btree_rch t1 rch1 && btree_lch t2 lch2 && btree_rch t2 rch2) && *)
+(*         (eqv_spine lch1 lch2) && (eqv_spine rch1 rch2))) *)
+(**)
+(* let[@axiom] eqv_spine_refl = *)
+(*   fun (l : 'a btree) -> eqv_spine l l *)
+(**)
+(* let[@axiom] eqv_spine_sym = *)
+(*   fun (l1 : 'a btree) (l2 : 'a btree) ->  *)
+(*     implies (eqv_spine l1 l2) (eqv_spine l2 l1) *)
+(**)
+(* let[@axiom] eqv_spine_trans = *)
+(*   fun (l1 : 'a btree) (l2 : 'a btree) (l3 : 'a btree) ->  *)
+(*     implies (eqv_spine l1 l2 && eqv_spine l2 l3) (eqv_spine l1 l3) *)

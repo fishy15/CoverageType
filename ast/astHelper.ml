@@ -250,6 +250,10 @@ let is_arr_arr_rty = function
   | RtyArr { argrty = RtyArr _; arg; retty } -> true
   | _ -> false
 
+let is_arr_ret_arr = function
+  | RtyArr { retty = RtyArr _; _ } -> true
+  | _ -> false
+
 let ou_to_qt = function Over -> Nt.Fa | Under -> Nt.Ex
 let qt_to_ou = function Nt.Fa -> Over | Nt.Ex -> Under
 

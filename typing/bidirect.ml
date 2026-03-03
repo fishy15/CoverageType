@@ -292,6 +292,10 @@ let type_check_group (bctx : built_in_ctx) =
               (* let () = Printf.printf "Application : %s\n" (layout_term e.x) in *)
               let* appf = value_type_infer rctx appf in
               let* apparg' = value_type_infer rctx apparg in
+              let () =
+                Pp.printf "appf_ty : %s | apparg %s \n" (layout_rty appf.ty)
+                  (layout_rty apparg'.ty)
+              in
               let poly_preds, appf_ty, apparg_rty =
                 instantiate_poly_pred_rty rctx.pred_ctx appf.ty apparg'.ty
               in
@@ -308,6 +312,11 @@ let type_check_group (bctx : built_in_ctx) =
                       (layout_rty appf_ty)
                   in
                   _die [%here]
+              in
+              let _ =
+                match construct_call_ret_exists rctx appf_ty retty with
+                | Some p -> Pp.printf "ret exists: %s\n" (layout_prop p)
+                | None -> ()
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               let retty =

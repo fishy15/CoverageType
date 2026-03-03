@@ -120,7 +120,7 @@ val tree_mem : 'a tree -> 'a -> bool
 val bst : 'a tree -> bool
 val heap : 'a tree -> bool
 val complete : 'a tree -> bool
-val tree_num_node : 'a tree -> int
+val tree_num_leaf : 'a tree -> int -> bool
 
 (** Stream *)
 
@@ -340,3 +340,4 @@ val pt_term_size : pt_term -> int
 
 val eqv_set : int list -> int list -> bool
 val eqv_eq : int list -> int list -> bool
+val eqv_spine : 'a tree -> 'a tree -> bool
