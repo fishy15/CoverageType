@@ -314,7 +314,11 @@ let type_check_group (bctx : built_in_ctx) =
                   _die [%here]
               in
               let _ =
-                match construct_call_ret_exists rctx appf_ty retty with
+                let prop =
+                  if is_arr_ret_arr appf_ty then None
+                  else Some (construct_call_ret_exists rctx retty)
+                in
+                match prop with
                 | Some p -> Pp.printf "ret exists: %s\n" (layout_prop p)
                 | None -> ()
               in
@@ -344,6 +348,10 @@ let type_check_group (bctx : built_in_ctx) =
                     let* rty = res in
                     over_arrow_type_apply rctx rty apparg.x#:apparg'.ty)
                   (Some op.ty) appopargs
+              in
+              let _ =
+                let p = construct_call_ret_exists rctx retty in
+                Pp.printf "ret exists: %s\n" (layout_prop p)
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               Some (CAppOp { op; appopargs = List.map snd appopargs })#:retty
