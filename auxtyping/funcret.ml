@@ -14,6 +14,7 @@ let possible_value_fv prop fv fvrty =
   match fvrty with
   | RtyBase { ou = Under; cty } ->
       let var = Rename.unique_var fv in
+      let prop = subst_prop_instance fv (AVar var#:cty.nty) prop in
       smart_dependent_forall (var, cty) prop
   | RtyBase { ou = Over; _ } ->
       (* let variable refer to that same value *)
