@@ -1,4 +1,4 @@
-let list_gen (n : int) : int list = [n]
+let list_gen (n : int) : int list = [n; n]
 
 let list_gen_nondet (n : int) : int list = 
   if bool_gen () then [n] else [n+1]

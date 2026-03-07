@@ -1,3 +1,4 @@
+open Auxprop
 open Language
 open Zutils
 
@@ -12,9 +13,8 @@ let possible_value_fv prop fv fvrty =
   let fv = fv.x in
   match fvrty with
   | RtyBase { ou = Under; cty } ->
-      let var = (Rename.unique_var fv)#:cty.nty in
-      let prop = subst_prop_instance fv (AVar var) prop in
-      smart_forall_phi (var, cty.phi) prop
+      let var = Rename.unique_var fv in
+      smart_dependent_forall (var, cty) prop
   | RtyBase { ou = Over; _ } ->
       (* let variable refer to that same value *)
       prop

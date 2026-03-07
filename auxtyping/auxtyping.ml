@@ -3,3 +3,4 @@ include Subrty
 include Tyfunc
 include Wellfound
 include Funcret
+include Auxprop
