@@ -5,7 +5,7 @@ open Subcty
 
 let _log = Myconfig._log_typing
 
-let rec sub_rty rctx (rty1, rty2) =
+let rec sub_rty rctx (rty1, rty2) exists_prop =
   ( _log @@ fun _ ->
     pprint_subtyping
       (fun () ->
@@ -16,23 +16,25 @@ let rec sub_rty rctx (rty1, rty2) =
     match (rty1, rty2) with
     | RtyBase { ou = Over; cty = cty1 }, RtyBase { ou = Over; cty = cty2 } ->
         if equal_cty (fun _ _ -> true) cty1 cty2 then true
-        else sub_cty Over rctx cty1 cty2
+        else sub_cty Over rctx cty1 cty2 exists_prop
     | RtyBase { ou = Under; cty = cty1 }, RtyBase { ou = Under; cty = cty2 } ->
         if equal_cty (fun _ _ -> true) cty1 cty2 then true
-        else sub_cty Under rctx cty1 cty2
+        else sub_cty Under rctx cty1 cty2 exists_prop
     | ( RtyArr { arg = arg1; argrty = argrty1; retty = retty1 },
         RtyArr { arg = arg2; argrty = argrty2; retty = retty2 } ) ->
-        sub_rty rctx (argrty2, argrty1)
+        (* TODO: check if call here is corerct *)
+        sub_rty rctx (argrty2, argrty1) exists_prop
         &&
         let retty2 =
           subst_rty_instance arg2 (AVar arg1#:(erase_rty argrty1)) retty2
         in
+        (* TODO: check if call here is corerct *)
         sub_rty
           {
             rctx with
             rty_ctx = Typectx.add_to_right rctx.rty_ctx arg1#:argrty2;
           }
-          (retty1, retty2)
+          (retty1, retty2) exists_prop
     | _, _ ->
         _failatwith [%here]
           (spf "die: %s <: %s" (layout_rty rty1) (layout_rty rty2))

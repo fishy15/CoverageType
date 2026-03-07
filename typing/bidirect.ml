@@ -24,9 +24,9 @@ let type_check_group (bctx : built_in_ctx) =
     (* NOTE: both over and under type will induce under type *)
     if is_base_rty rty then mk_eq_tvar_underrty id.x#:(erase_rty rty) else rty
   in
-  let subtyping rctx (rty1, rty2) =
+  let subtyping rctx (rty1, rty2) exists_prop =
     pprint_typing_subtyping rctx (rty1, rty2);
-    sub_rty rctx (rty1, rty2)
+    sub_rty rctx (rty1, rty2) exists_prop
   in
   let rec value_type_infer (rctx : rctx) (v : (Nt.t, Nt.t value) typed) :
       (Nt.t rty, Nt.t rty value) typed option =
@@ -135,7 +135,8 @@ let type_check_group (bctx : built_in_ctx) =
         value_type_check (Rctx.add_pred rctx pred) v rty
     | VConst _, _ | VVar _, _ | VTuple _, _ ->
         let* e = value_type_infer rctx v in
-        if subtyping rctx (e.ty, rty) then Some e
+        let exists_prop = Prop.mk_true in
+        if subtyping rctx (e.ty, rty) exists_prop then Some e
         else (
           _warinning_subtyping_error [%here] (e.ty, rty);
           _warinning_typing_error [%here] (layout_typed_value v, rty);
@@ -215,7 +216,7 @@ let type_check_group (bctx : built_in_ctx) =
     in
     match argrty with
     | RtyArr _ ->
-        if not (subtyping rctx (apparg.ty, argrty)) then (
+        if not (subtyping rctx (apparg.ty, argrty) Prop.mk_true) then (
           _warinning_subtyping_error [%here] (apparg.ty, argrty);
           _warinning_typing_error [%here]
             (layout_typed_value @@ (apparg#=>erase_rty), argrty);
@@ -430,8 +431,8 @@ let type_check_group (bctx : built_in_ctx) =
         | CLetDeTuple _ -> failwith "unimp"
         | CApp _ | CAppOp _ | CMatch _ | CLetE _ | CRecord _ | CField _ ->
             (* TODO: pass in exists_prop to sub_rty call *)
-            let* e', _ = term_type_infer rctx e in
-            if sub_rty rctx (e'.ty, rty) then Some e'.x#:rty
+            let* e', exists_prop = term_type_infer rctx e in
+            if sub_rty rctx (e'.ty, rty) exists_prop then Some e'.x#:rty
             else (
               _warinning_subtyping_error [%here] (e'.ty, rty);
               _warinning_typing_error [%here] (layout_typed_term e, rty);

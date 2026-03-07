@@ -57,7 +57,7 @@ let simplify_sub_typectx ctx (rty1, rty2) =
   in
   aux ([], ctx) (rty1, rty2)
 
-let sub_cty ou rctx cty1 cty2 =
+let sub_cty ou rctx cty1 cty2 exists_prop =
   let ctx_list, cty1, cty2 = simplify_sub_typectx rctx.rty_ctx (cty1, cty2) in
   let () =
     Printf.printf "ctx_list: %s\n" (List.split_by_comma _get_x ctx_list)
@@ -104,6 +104,7 @@ let sub_cty ou rctx cty1 cty2 =
     match (ou, cty1.eqv, cty2.eqv) with
     | Over, None, None ->
         let prop = smart_implies cty1.phi cty2.phi in
+        let prop = smart_implies exists_prop prop in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty1.nty) ])
           prop
@@ -113,6 +114,7 @@ let sub_cty ou rctx cty1 cty2 =
             (fresh_name_prop cty1.phi)
         in
         let prop = smart_implies cty2.phi rhs in
+        let prop = smart_implies exists_prop prop in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
@@ -121,6 +123,7 @@ let sub_cty ou rctx cty1 cty2 =
         let phi = eqv_to_phi nty cty1.phi eqv in
         let rhs = List.fold_right smart_dependent_exists underctx phi in
         let prop = smart_implies cty2.phi rhs in
+        let prop = smart_implies exists_prop prop in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop

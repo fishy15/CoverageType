@@ -26,7 +26,9 @@ let subtype_check source_file () =
   in
   let _ = Preprocess.load_bctx () in
   let res =
-    Auxtyping.sub_rty (Typing.Rctx.emp "subtyping" [] []) (rty1, rty2)
+    Auxtyping.sub_rty
+      (Typing.Rctx.emp "subtyping" [] [])
+      (rty1, rty2) Prop.mk_true
   in
   Pp.printf "@{<bold>result: %b:@}\n" res
 
