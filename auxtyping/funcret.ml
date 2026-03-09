@@ -22,18 +22,8 @@ let possible_value_fv prop fv fvrty =
   | _ -> _die_with [%here] "unimp"
 
 let merge_keep_snd xs ys =
-  Pp.printf "xs: ";
-  List.iter (fun x -> Printf.printf "%s " x.x) xs;
-  print_newline ();
-  Pp.printf "ys: ";
-  List.iter (fun y -> Printf.printf "%s " y.x) ys;
-  print_newline ();
   let xs = List.filter (fun x -> not (List.mem x ys)) xs in
-  let res = xs @ ys in
-  Pp.printf "res: ";
-  List.iter (fun y -> Printf.printf "%s " y.x) res;
-  print_newline ();
-  res
+  xs @ ys
 
 let relevant_fvs_in_ctx rctx rty =
   let rec aux rty =
@@ -72,4 +62,6 @@ let construct_call_ret_exists rctx retty =
     | _ -> _die_with [%here] "unimp"
   in
   let prop = exists_fresh_v_prop retcty in
-  List.fold_left2 possible_value_fv prop fvs fvrtys
+  List.fold_left2
+    (fun p f r -> fresh_name_prop (possible_value_fv p f r))
+    prop fvs fvrtys
