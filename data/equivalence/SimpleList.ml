@@ -6,8 +6,8 @@ let list_gen_nondet (n : int) : int list =
 let[@assert] list_gen ?r:(n : int) =
   (((fun (x : int) -> (list_len v > 0) && ((list_mem v x) #==> (x == n))) : [%v: int list]) [@eqv eqv_set])
 
-(* let[@assert] list_gen_nondet ?r:(n : int) = *)
-(*   (((fun (x : int) -> (list_len v > 0) && ((list_mem v x) #==> (x == n))) : [%v: int list]) [@eqv eqv_set]) *)
+let[@assert] list_gen_nondet ?r:(n : int) =
+  (((fun (x : int) -> (list_len v > 0) && ((list_mem v x) #==> (x == n))) : [%v: int list]) [@eqv eqv_set])
 
 (* let[@valid] list_gen_check  = *)
 (*   fun (n : int) ->  *)

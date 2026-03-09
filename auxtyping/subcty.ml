@@ -34,15 +34,15 @@ let check_valid (task, query) =
   let () = report_unclosed [%here] query in
   Prover.check_valid (task, query)
 
-let simplify_sub_typectx ctx (rty1, rty2) =
+let simplify_sub_typectx ctx (rty1, rty2) exists_prop =
   let ctx = Typectx.ctx_to_list ctx in
-  let rec aux (prefix, rest) (rty1, rty2) =
+  let rec aux (prefix, rest) (rty1, rty2) exists_prop =
     match rest with
-    | [] -> (prefix, rty1, rty2)
+    | [] -> (prefix, rty1, rty2, exists_prop)
     | { x; ty } :: rest -> (
         match ty with
-        | RtyBase { cty; _ } -> (
-            match is_eq_phi default_v#:cty.nty cty.phi with
+        | RtyBase { cty = { nty; phi; eqv = None }; _ } -> (
+            match is_eq_phi default_v#:nty phi with
             | Some lit ->
                 let rty1 = subst_cty_instance x lit rty1 in
                 let rty2 = subst_cty_instance x lit rty2 in
@@ -51,14 +51,18 @@ let simplify_sub_typectx ctx (rty1, rty2) =
                     (fun y -> { x = y.x; ty = subst_rty_instance x lit y.ty })
                     rest
                 in
-                aux (prefix, rest) (rty1, rty2)
-            | None -> aux (prefix @ [ { x; ty } ], rest) (rty1, rty2))
-        | _ -> aux (prefix @ [ { x; ty } ], rest) (rty1, rty2))
+                let exists_prop = subst_prop_instance x lit exists_prop in
+                aux (prefix, rest) (rty1, rty2) exists_prop
+            | None ->
+                aux (prefix @ [ { x; ty } ], rest) (rty1, rty2) exists_prop)
+        | _ -> aux (prefix @ [ { x; ty } ], rest) (rty1, rty2) exists_prop)
   in
-  aux ([], ctx) (rty1, rty2)
+  aux ([], ctx) (rty1, rty2) exists_prop
 
 let sub_cty ou rctx cty1 cty2 exists_prop =
-  let ctx_list, cty1, cty2 = simplify_sub_typectx rctx.rty_ctx (cty1, cty2) in
+  let ctx_list, cty1, cty2, exists_prop =
+    simplify_sub_typectx rctx.rty_ctx (cty1, cty2) exists_prop
+  in
   let () =
     Printf.printf "ctx_list: %s\n" (List.split_by_comma _get_x ctx_list)
   in

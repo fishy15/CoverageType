@@ -430,7 +430,6 @@ let type_check_group (bctx : built_in_ctx) =
         | CErr -> Some CErr#:rty
         | CLetDeTuple _ -> failwith "unimp"
         | CApp _ | CAppOp _ | CMatch _ | CLetE _ | CRecord _ | CField _ ->
-            (* TODO: pass in exists_prop to sub_rty call *)
             let* e', exists_prop = term_type_infer rctx e in
             if sub_rty rctx (e'.ty, rty) exists_prop then Some e'.x#:rty
             else (
