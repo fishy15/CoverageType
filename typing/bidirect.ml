@@ -204,6 +204,14 @@ let type_check_group (bctx : built_in_ctx) =
         Some
           (VFix { fixname = fixname.x#:rty; fixarg = fixarg.x#:argrty; body })#:rty
     | VFix _, _ -> _die [%here]
+  and arrow_get_arg_rtys (appf_rty : Nt.t rty) : Nt.t rty list =
+    let rec aux rty =
+      match rty with
+      | RtyArr { argrty; retty; _ } -> argrty :: aux retty
+      | RtyBase _ -> []
+      | _ -> _die_with [%here] "unexpected rty type"
+    in
+    aux appf_rty
   and arrow_type_arg_prop appf_rty (apparg : (Nt.t rty, Nt.t value) typed) :
       Nt.t prop =
     let argrty, _, _ = destruct_arr_rty [%here] appf_rty in
@@ -377,9 +385,9 @@ let type_check_group (bctx : built_in_ctx) =
                     p
                 | None -> Prop.mk_true
               in
-              let call_constraint =
-                arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
-              in
+              let call_constraint = Prop.mk_true in
+              (* arrow_type_arg_prop appf_ty apparg.x#:apparg_rty *)
+              (* in *)
               Pp.printf "call constraint: %s\n" (layout_prop call_constraint);
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               let retty =
@@ -411,16 +419,17 @@ let type_check_group (bctx : built_in_ctx) =
                     over_arrow_type_apply rctx rty apparg.x#:apparg'.ty)
                   (Some op.ty) appopargs
               in
+              let op_arg_rtys = arrow_get_arg_rtys op.ty in
               let exists_prop =
                 let p = construct_call_ret_exists rctx retty in
                 Pp.printf "ret exists: %s\n" (layout_prop p);
                 p
               in
               let call_constraints =
-                List.map
-                  (fun (apparg, apparg') ->
-                    arrow_type_arg_prop op.ty apparg.x#:apparg'.ty)
-                  appopargs
+                List.map2
+                  (fun (apparg, apparg') argrty ->
+                    arrow_type_arg_prop argrty apparg.x#:apparg'.ty)
+                  appopargs op_arg_rtys
                 |> smart_and
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
