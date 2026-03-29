@@ -9,6 +9,18 @@ type value_infer_mode = TopParam | PolyPredParam
 
 let value_infer_mode = PolyPredParam
 
+type 'a infer_result = {
+  term : 'a;
+  exists_prop : Nt.t prop;
+  call_constraints : Nt.t prop;
+}
+
+let infer_result_default term =
+  { term; exists_prop = Prop.mk_true; call_constraints = Prop.mk_true }
+
+let infer_result term exists_prop call_constraints =
+  { term; exists_prop; call_constraints }
+
 let type_check_group (bctx : built_in_ctx) =
   let _find_in_ctx loc (rctx : rctx) (id : (Nt.t, string) typed) =
     let res = lookup_ctxs [ rctx.rty_ctx; bctx.builtin_ctx ] id.x in
@@ -33,6 +45,7 @@ let type_check_group (bctx : built_in_ctx) =
     let res =
       match v.x with
       | VVar id ->
+          Pp.printf "infer variable %s\n" id.x;
           let () = if String.equal id.x "None" then _die [%here] in
           let rty = _id_type_infer [%here] rctx id in
           let res = Some (VVar id.x#:rty)#:rty in
@@ -40,16 +53,19 @@ let type_check_group (bctx : built_in_ctx) =
             pprint_typing_infer_value_after rctx (v, res);
           res
       | VConst U ->
+          Pp.printf "infer unit\n";
           let res = Some (VConst U)#:(mk_top_underrty Nt.unit_ty) in
           if Myconfig.get_bool_option "show_type_infer_constant_judgement" then
             pprint_typing_infer_value_after rctx (v, res);
           res
       | VConst c ->
+          Pp.printf "infer constant\n";
           let res = Some (VConst c)#:(mk_eq_c_underrty c) in
           if Myconfig.get_bool_option "show_type_infer_constant_judgement" then
             pprint_typing_infer_value_after rctx (v, res);
           res
       | VTuple vs ->
+          Pp.printf "infer tuple\n";
           let* vs =
             opt_list_to_list_opt @@ List.map (value_type_infer rctx) vs
           in
@@ -77,6 +93,7 @@ let type_check_group (bctx : built_in_ctx) =
           pprint_typing_infer_value_after rctx (v, res);
           res
       | VLam { lamarg; body } ->
+          Pp.printf "infer lambda\n";
           let nty = lamarg.ty in
           let res =
             if Nt.is_base_tp nty then
@@ -97,25 +114,24 @@ let type_check_group (bctx : built_in_ctx) =
                   let rctx' = Rctx.add_pred rctx pred in
                   let rctx' = Rctx.add_var rctx' lamarg in
                   (* TODO: propagate exists_prop up *)
-                  let* body, _ = term_type_infer rctx' body in
+                  let* body = term_type_infer rctx' body in
                   let frty =
                     construct_poly_pred_rty
-                      ([ pred ], construct_rty ([ lamarg ], body.ty))
+                      ([ pred ], construct_rty ([ lamarg ], body.term.ty))
                   in
-                  Some (VLam { lamarg; body })#:frty
+                  Some (VLam { lamarg; body = body.term })#:frty
               | TopParam ->
                   let lamarg = lamarg.x#:(mk_top_overrty nty) in
                   (* TODO: propagate exists_prop up *)
-                  let* body, _ =
-                    term_type_infer (Rctx.add_var rctx lamarg) body
-                  in
-                  let frty = construct_rty ([ lamarg ], body.ty) in
-                  Some (VLam { lamarg; body })#:frty
+                  let* body = term_type_infer (Rctx.add_var rctx lamarg) body in
+                  let frty = construct_rty ([ lamarg ], body.term.ty) in
+                  Some (VLam { lamarg; body = body.term })#:frty
             else _die_with [%here] "unimp"
           in
           pprint_typing_infer_value_after rctx (v, res);
           res
       | VFix { fixname; _ } -> (
+          Pp.printf "infer fix\n";
           match Typectx.get_opt rctx.inv_ctx fixname.x with
           | None ->
               _die_with [%here]
@@ -142,6 +158,7 @@ let type_check_group (bctx : built_in_ctx) =
           _warinning_typing_error [%here] (layout_typed_value v, rty);
           None)
     | VLam { lamarg; body }, RtyArr { argrty; arg; retty } ->
+        Pp.printf "in lam case\n";
         (* NOTE: unify the name of parameter type and lambda variable *)
         let retty = subst_rty_instance arg (AVar lamarg) retty in
         let lamarg = lamarg.x#:argrty in
@@ -187,6 +204,20 @@ let type_check_group (bctx : built_in_ctx) =
         Some
           (VFix { fixname = fixname.x#:rty; fixarg = fixarg.x#:argrty; body })#:rty
     | VFix _, _ -> _die [%here]
+  and arrow_type_arg_prop appf_rty (apparg : (Nt.t rty, Nt.t value) typed) :
+      Nt.t prop =
+    let argrty, _, _ = destruct_arr_rty [%here] appf_rty in
+    let () =
+      Pp.printf "app basic type check: %s vs %s\n" (layout_rty argrty)
+        (layout_rty apparg.ty);
+      _assert [%here] "application basic type check"
+        (Nt.equal_nt (erase_rty argrty) (erase_rty apparg.ty))
+    in
+    match argrty with
+    | RtyBase { ou = Over; cty } ->
+        let arglit = value_to_lit [%here] apparg.x in
+        subst_prop_instance default_v arglit cty.phi
+    | _ -> _die [%here]
   and over_arrow_type_apply (_ : rctx) appf_rty
       (apparg : (Nt.t rty, Nt.t value) typed) : Nt.t rty option =
     let argrty, arg, retty = destruct_arr_rty [%here] appf_rty in
@@ -194,14 +225,17 @@ let type_check_group (bctx : built_in_ctx) =
       _assert [%here] "application basic type check"
         (Nt.equal_nt (erase_rty argrty) (erase_rty apparg.ty))
     in
+    Pp.printf "old retty: %s\n" (layout_rty retty);
     match argrty with
     | RtyBase { ou = Over; cty } ->
         let arglit = value_to_lit [%here] apparg.x in
         let retty = subst_rty_instance arg arglit retty in
+        Pp.printf "mid retty: %s\n" (layout_rty retty);
         let tmp_rty =
           mk_unit_underrty (subst_prop_instance default_v arglit cty.phi)
         in
         let retty = exists_rty (Rename.fresh_var ())#:tmp_rty retty in
+        Pp.printf "new retty: %s\n" (layout_rty retty);
         Some retty
     | _ -> _die [%here]
   and arrow_arrow_type_apply (rctx : rctx) appf_rty
@@ -228,11 +262,11 @@ let type_check_group (bctx : built_in_ctx) =
         else Some retty
     | _ -> _die [%here]
   and term_type_infer (rctx : rctx) (e : (Nt.t, Nt.t term) typed) :
-      ((Nt.t rty, Nt.t rty term) typed * Nt.t prop) option =
+      (Nt.t rty, Nt.t rty term) typed infer_result option =
     match e.x with
     | CVal v ->
         let* v = value_type_infer rctx v in
-        Some ((CVal v)#:v.ty, Prop.mk_true)
+        Some (infer_result_default (CVal v)#:v.ty)
     | _ ->
         let () = pprint_typing_infer_term_before rctx e in
         let res =
@@ -242,7 +276,7 @@ let type_check_group (bctx : built_in_ctx) =
               _assert [%here]
                 (spf "err can only has base type, not %s" (Nt.layout_nt e.ty))
                 (Nt.is_base_tp e.ty);
-              Some (CErr#:(mk_bot_underrty e.ty), Prop.mk_true)
+              Some (infer_result_default CErr#:(mk_bot_underrty e.ty))
           | CRecord vs ->
               let fields, vs = List.split vs in
               let* vs =
@@ -261,29 +295,37 @@ let type_check_group (bctx : built_in_ctx) =
               in
               let cty = { nty = e.ty; phi = smart_and phis; eqv = None } in
               let rty = RtyBase { ou = Under; cty } in
-              Some ((CRecord vs)#:rty, Prop.mk_true)
+              Some (infer_result_default (CRecord vs)#:rty)
           | CField { rd; field } ->
               let lit = value_to_lit [%here] rd.x in
               let lit = (AField (lit_to_tlit lit, field))#:e.ty in
               let* rd = value_type_infer rctx rd in
               let rty = RtyBase { ou = Under; cty = mk_eq_lit_cty lit } in
-              Some ((CField { rd; field })#:rty, Prop.mk_true)
+              Some (infer_result_default (CField { rd; field })#:rty)
           | CLetE { rhs; lhs; body } ->
-              let* rhs', exists_prop_rhs = term_type_infer rctx rhs in
-              if not (non_emptiness_rty rctx rhs'.ty) then (
-                _warinning_nonemptiness_error [%here] rhs'.ty;
-                _warinning_typing_error [%here] (layout_term rhs.x, rhs'.ty);
+              let* rhs' = term_type_infer rctx rhs in
+              if not (non_emptiness_rty rctx rhs'.term.ty) then (
+                _warinning_nonemptiness_error [%here] rhs'.term.ty;
+                _warinning_typing_error [%here] (layout_term rhs.x, rhs'.term.ty);
                 None)
               else
                 let rhs = rhs' in
-                let lhs = lhs.x#:rhs.ty in
+                let lhs = lhs.x#:rhs.term.ty in
                 let rctx' = Rctx.add_var rctx lhs in
-                let* body, exists_prop_body = term_type_infer rctx' body in
-                let rty = Rctx.diff_exists_rty [%here] rctx' rctx body.ty in
-                let exists_prop =
-                  smart_and [ exists_prop_rhs; exists_prop_body ]
+                let* body = term_type_infer rctx' body in
+                let rty =
+                  Rctx.diff_exists_rty [%here] rctx' rctx body.term.ty
                 in
-                Some ((CLetE { rhs; lhs; body })#:rty, exists_prop)
+                let exists_prop =
+                  smart_and [ rhs.exists_prop; body.exists_prop ]
+                in
+                let call_constraints =
+                  smart_and [ rhs.call_constraints; body.call_constraints ]
+                in
+                Some
+                  (infer_result
+                     (CLetE { rhs = rhs.term; lhs; body = body.term })#:rty
+                     exists_prop call_constraints)
           (* (\* Lambda function to let binding *\) *)
           (* | CApp { appf = { x = VLam { lamarg; body }; _ }; apparg } -> *)
           (*     let apparg = value_type_infer rctx apparg in *)
@@ -298,8 +340,11 @@ let type_check_group (bctx : built_in_ctx) =
           (*     Some (CApp { appf; apparg })#:rty *)
           | CApp { appf; apparg } ->
               (* let () = Printf.printf "Application : %s\n" (layout_term e.x) in *)
+              Pp.printf "inferring appf\n";
               let* appf = value_type_infer rctx appf in
+              Pp.printf "inferring apparg\n";
               let* apparg' = value_type_infer rctx apparg in
+              Pp.printf "done inferring\n";
               let () =
                 Pp.printf "appf_ty : %s | apparg %s \n" (layout_rty appf.ty)
                   (layout_rty apparg'.ty)
@@ -332,13 +377,20 @@ let type_check_group (bctx : built_in_ctx) =
                     p
                 | None -> Prop.mk_true
               in
+              let call_constraint =
+                arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
+              in
+              Pp.printf "call constraint: %s\n" (layout_prop call_constraint);
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               let retty =
                 remove_redundant_poly_pred
                 @@ construct_poly_pred_rty (poly_preds, retty)
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
-              Some ((CApp { appf; apparg = apparg' })#:retty, exists_prop)
+              Some
+                (infer_result
+                   (CApp { appf; apparg = apparg' })#:retty
+                   exists_prop call_constraint)
           | CAppOp { op; appopargs } ->
               let op =
                 op.x#:(_find_in_ctx [%here] rctx op#->op_name_for_typectx)
@@ -364,28 +416,42 @@ let type_check_group (bctx : built_in_ctx) =
                 Pp.printf "ret exists: %s\n" (layout_prop p);
                 p
               in
+              let call_constraints =
+                List.map
+                  (fun (apparg, apparg') ->
+                    arrow_type_arg_prop op.ty apparg.x#:apparg'.ty)
+                  appopargs
+                |> smart_and
+              in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               Some
-                ( (CAppOp { op; appopargs = List.map snd appopargs })#:retty,
-                  exists_prop )
+                (infer_result
+                   (CAppOp { op; appopargs = List.map snd appopargs })#:retty
+                   exists_prop call_constraints)
           | CMatch { matched; match_cases } ->
               (* NOTE: we drop unreachable cases *)
-              let match_cases, exists_props =
-                List.split
-                  (List.filter_map
-                     (match_case_type_infer rctx matched)
-                     match_cases)
+              let match_cases =
+                List.filter_map (match_case_type_infer rctx matched) match_cases
               in
               (* TODO: might need to add branch conditions here? *)
-              let exist_prop = smart_and exists_props in
+              let exists_prop =
+                smart_and (List.map (fun x -> x.exists_prop) match_cases)
+              in
+              let call_constraints =
+                smart_and (List.map (fun x -> x.call_constraints) match_cases)
+              in
               let unioned_ty =
                 union_rtys
                 @@ List.map
-                     (function CMatchcase { exp; _ } -> exp.ty)
+                     (function { term = CMatchcase { exp; _ }; _ } -> exp.ty)
                      match_cases
               in
               let* matched = value_type_infer rctx matched in
-              Some ((CMatch { matched; match_cases })#:unioned_ty, exist_prop)
+              let match_cases = List.map (fun x -> x.term) match_cases in
+              Some
+                (infer_result
+                   (CMatch { matched; match_cases })#:unioned_ty
+                   exists_prop call_constraints)
           | CLetDeTuple { turhs; tulhs; body } ->
               let* turhs' = value_type_infer rctx turhs in
               let tmp = (Rename.fresh_var ())#:turhs.ty in
@@ -399,10 +465,12 @@ let type_check_group (bctx : built_in_ctx) =
               in
               let tmp = tmp.x#:turhs'.ty in
               let rctx' = Rctx.add_vars rctx (tmp :: tulhs) in
-              let* body, exists_prop = term_type_infer rctx' body in
-              let rty = Rctx.diff_exists_rty [%here] rctx' rctx body.ty in
+              let* body = term_type_infer rctx' body in
+              let rty = Rctx.diff_exists_rty [%here] rctx' rctx body.term.ty in
               Some
-                ((CLetDeTuple { turhs = turhs'; tulhs; body })#:rty, exists_prop)
+                (infer_result
+                   (CLetDeTuple { turhs = turhs'; tulhs; body = body.term })#:rty
+                   body.exists_prop body.call_constraints)
           (* | CLetE { rhs; lhs; body } -> *)
           (*     let* rhs = term_type_infer rctx rhs in *)
           (*     let lhs = lhs.x#:rhs.ty in *)
@@ -415,7 +483,7 @@ let type_check_group (bctx : built_in_ctx) =
         pprint_typing_infer_term_after rctx
           ( e,
             let* res = res in
-            Some (fst res).ty );
+            Some res.term.ty );
         res
   and term_type_check (rctx : rctx) (e : (Nt.t, Nt.t term) typed)
       (rty : Nt.t rty) : (Nt.t rty, Nt.t rty term) typed option =
@@ -430,10 +498,11 @@ let type_check_group (bctx : built_in_ctx) =
         | CErr -> Some CErr#:rty
         | CLetDeTuple _ -> failwith "unimp"
         | CApp _ | CAppOp _ | CMatch _ | CLetE _ | CRecord _ | CField _ ->
-            let* e', exists_prop = term_type_infer rctx e in
-            if sub_rty rctx (e'.ty, rty) exists_prop then Some e'.x#:rty
+            let* e' = term_type_infer rctx e in
+            if sub_rty rctx (e'.term.ty, rty) e'.exists_prop then
+              Some e'.term.x#:rty
             else (
-              _warinning_subtyping_error [%here] (e'.ty, rty);
+              _warinning_subtyping_error [%here] (e'.term.ty, rty);
               _warinning_typing_error [%here] (layout_typed_term e, rty);
               None))
   (* | CLetE { rhs; lhs; body } -> *)
@@ -442,7 +511,7 @@ let type_check_group (bctx : built_in_ctx) =
   (*     let* body = term_type_check rctx' body rty in *)
   (*     Some (CLetE { rhs; lhs; body }) #: rty *)
   and match_case_type_infer (rctx : rctx) (matched : (Nt.t, Nt.t value) typed)
-      (x : Nt.t match_case) : (Nt.t rty match_case * Nt.t prop) option =
+      (x : Nt.t match_case) : Nt.t rty match_case infer_result option =
     match x with
     | CMatchcase { constructor; args; exp } ->
         let constructor_rty =
@@ -478,15 +547,20 @@ let type_check_group (bctx : built_in_ctx) =
         let rctx' =
           Rctx.add_vars rctx (args @ [ (Rename.fresh_var ())#:retty ])
         in
-        let* exp', exists_prop = term_type_infer rctx' exp in
-        let exp' = exp'#=>(Rctx.diff_exists_rty [%here] rctx' rctx) in
+        let* exp' = term_type_infer rctx' exp in
+        let exp'_term = exp'.term#=>(Rctx.diff_exists_rty [%here] rctx' rctx) in
         let () =
-          pprint_typing_infer_match_case rctx constructor (exp, exp'.ty)
+          pprint_typing_infer_match_case rctx constructor (exp, exp'_term.ty)
         in
         Some
-          ( CMatchcase
-              { constructor = constructor.x#:constructor_rty; args; exp = exp' },
-            exists_prop )
+          (infer_result
+             (CMatchcase
+                {
+                  constructor = constructor.x#:constructor_rty;
+                  args;
+                  exp = exp'_term;
+                })
+             exp'.exists_prop exp'.call_constraints)
   in
   (value_type_check, term_type_check)
 
