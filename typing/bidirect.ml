@@ -548,9 +548,14 @@ let type_check_group (bctx : built_in_ctx) =
           Rctx.add_vars rctx (args @ [ (Rename.fresh_var ())#:retty ])
         in
         let* exp' = term_type_infer rctx' exp in
-        let exp'_term = exp'.term#=>(Rctx.diff_exists_rty [%here] rctx' rctx) in
+        let exp' =
+          {
+            exp' with
+            term = exp'.term#=>(Rctx.diff_exists_rty [%here] rctx' rctx);
+          }
+        in
         let () =
-          pprint_typing_infer_match_case rctx constructor (exp, exp'_term.ty)
+          pprint_typing_infer_match_case rctx constructor (exp, exp'.term.ty)
         in
         Some
           (infer_result
@@ -558,7 +563,7 @@ let type_check_group (bctx : built_in_ctx) =
                 {
                   constructor = constructor.x#:constructor_rty;
                   args;
-                  exp = exp'_term;
+                  exp = exp'.term;
                 })
              exp'.exists_prop exp'.call_constraints)
   in
