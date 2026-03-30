@@ -9,11 +9,16 @@ let exists_fresh_v_prop cty =
   let prop = subst_prop_instance default_v (AVar var) prop in
   Exists { qv = var; body = prop }
 
-let possible_value_fv prop fv fvrty =
+let possible_value_fv constraints prop fv fvrty =
   let fv = fv.x in
   match fvrty with
   | RtyBase { ou = Under; cty } ->
       let var = Rename.unique_var fv in
+      let prop_constraint =
+        List.assoc_opt (AVar fv#:cty.nty) constraints
+        |> Option.value ~default:Prop.mk_true
+      in
+      let prop = smart_implies prop_constraint prop in
       let prop = subst_prop_instance fv (AVar var#:cty.nty) prop in
       smart_dependent_forall (var, cty) prop
   | RtyBase { ou = Over; _ } ->
@@ -40,7 +45,7 @@ let relevant_fvs_in_ctx rctx rty =
   in
   aux rty
 
-let construct_call_ret_exists rctx retty =
+let construct_call_ret_exists rctx retty constraints =
   let fvs = relevant_fvs_in_ctx rctx retty in
   let fvrtys =
     List.map
@@ -56,12 +61,15 @@ let construct_call_ret_exists rctx retty =
     (fun fv fvrty -> Printf.printf "%s <%s> " fv.x (layout_rty fvrty))
     fvs fvrtys;
   print_newline ();
+  Printf.printf "call constraints:";
+  List.iter
+    (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p))
+    constraints;
+  print_newline ();
   let retcty =
     match retty with
     | RtyBase { ou = Under; cty } -> cty
     | _ -> _die_with [%here] "unimp"
   in
   let prop = exists_fresh_v_prop retcty in
-  List.fold_left2
-    (fun p f r -> fresh_name_prop (possible_value_fv p f r))
-    prop fvs fvrtys
+  List.fold_left2 (possible_value_fv constraints) prop fvs fvrtys

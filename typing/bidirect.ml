@@ -375,19 +375,21 @@ let type_check_group (bctx : built_in_ctx) =
                   in
                   _die [%here]
               in
+              let call_constraint =
+                arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
+              in
               let exists_prop =
                 let prop =
                   if is_arr_ret_arr appf_ty then None
-                  else Some (construct_call_ret_exists rctx retty)
+                  else
+                    Some
+                      (construct_call_ret_exists rctx retty [ call_constraint ])
                 in
                 match prop with
                 | Some p ->
                     Pp.printf "ret exists: %s\n" (layout_prop p);
                     p
                 | None -> Prop.mk_true
-              in
-              let call_constraint =
-                arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               let retty =
@@ -420,16 +422,16 @@ let type_check_group (bctx : built_in_ctx) =
                   (Some op.ty) appopargs
               in
               let op_arg_rtys = arrow_subarrow_rtys op.ty in
-              let exists_prop =
-                let p = construct_call_ret_exists rctx retty in
-                Pp.printf "ret exists: %s\n" (layout_prop p);
-                p
-              in
               let call_constraints =
                 List.map2
                   (fun (apparg, apparg') argrty ->
                     arrow_type_arg_prop argrty apparg.x#:apparg'.ty)
                   appopargs op_arg_rtys
+              in
+              let exists_prop =
+                let p = construct_call_ret_exists rctx retty call_constraints in
+                Pp.printf "ret exists: %s\n" (layout_prop p);
+                p
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               Some
