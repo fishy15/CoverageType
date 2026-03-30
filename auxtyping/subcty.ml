@@ -59,13 +59,19 @@ let simplify_sub_typectx ctx (rty1, rty2) exists_prop =
   in
   aux ([], ctx) (rty1, rty2) exists_prop
 
-let sub_cty ou rctx cty1 cty2 exists_prop =
+let sub_cty ou rctx cty1 cty2 exists_prop call_constraints =
   let ctx_list, cty1, cty2, exists_prop =
     simplify_sub_typectx rctx.rty_ctx (cty1, cty2) exists_prop
   in
   let () =
     Printf.printf "ctx_list: %s\n" (List.split_by_comma _get_x ctx_list)
   in
+  Printf.printf "exists_prop: %s\n" (layout_prop exists_prop);
+  Printf.printf "call constraints:";
+  List.iter
+    (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p))
+    call_constraints;
+  print_newline ();
   let overctx, underctx = build_wf_ctx ctx_list in
   let () =
     _log_auxtyping @@ fun _ ->

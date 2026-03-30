@@ -12,11 +12,11 @@ let value_infer_mode = PolyPredParam
 type 'a infer_result = {
   term : 'a;
   exists_prop : Nt.t prop;
-  call_constraints : Nt.t prop;
+  call_constraints : (Nt.t lit * Nt.t prop) list;
 }
 
 let infer_result_default term =
-  { term; exists_prop = Prop.mk_true; call_constraints = Prop.mk_true }
+  { term; exists_prop = Prop.mk_true; call_constraints = [] }
 
 let infer_result term exists_prop call_constraints =
   { term; exists_prop; call_constraints }
@@ -36,9 +36,9 @@ let type_check_group (bctx : built_in_ctx) =
     (* NOTE: both over and under type will induce under type *)
     if is_base_rty rty then mk_eq_tvar_underrty id.x#:(erase_rty rty) else rty
   in
-  let subtyping rctx (rty1, rty2) exists_prop =
+  let subtyping rctx (rty1, rty2) exists_prop call_constraints =
     pprint_typing_subtyping rctx (rty1, rty2);
-    sub_rty rctx (rty1, rty2) exists_prop
+    sub_rty rctx (rty1, rty2) exists_prop call_constraints
   in
   let rec value_type_infer (rctx : rctx) (v : (Nt.t, Nt.t value) typed) :
       (Nt.t rty, Nt.t rty value) typed option =
@@ -152,7 +152,8 @@ let type_check_group (bctx : built_in_ctx) =
     | VConst _, _ | VVar _, _ | VTuple _, _ ->
         let* e = value_type_infer rctx v in
         let exists_prop = Prop.mk_true in
-        if subtyping rctx (e.ty, rty) exists_prop then Some e
+        let call_constraints = [] in
+        if subtyping rctx (e.ty, rty) exists_prop call_constraints then Some e
         else (
           _warinning_subtyping_error [%here] (e.ty, rty);
           _warinning_typing_error [%here] (layout_typed_value v, rty);
@@ -204,16 +205,16 @@ let type_check_group (bctx : built_in_ctx) =
         Some
           (VFix { fixname = fixname.x#:rty; fixarg = fixarg.x#:argrty; body })#:rty
     | VFix _, _ -> _die [%here]
-  and arrow_get_arg_rtys (appf_rty : Nt.t rty) : Nt.t rty list =
+  and arrow_subarrow_rtys (appf_rty : Nt.t rty) : Nt.t rty list =
     let rec aux rty =
       match rty with
-      | RtyArr { argrty; retty; _ } -> argrty :: aux retty
+      | RtyArr { retty; _ } -> rty :: aux retty
       | RtyBase _ -> []
       | _ -> _die_with [%here] "unexpected rty type"
     in
     aux appf_rty
   and arrow_type_arg_prop appf_rty (apparg : (Nt.t rty, Nt.t value) typed) :
-      Nt.t prop =
+      Nt.t lit * Nt.t prop =
     let argrty, _, _ = destruct_arr_rty [%here] appf_rty in
     let () =
       Pp.printf "app basic type check: %s vs %s\n" (layout_rty argrty)
@@ -224,7 +225,7 @@ let type_check_group (bctx : built_in_ctx) =
     match argrty with
     | RtyBase { ou = Over; cty } ->
         let arglit = value_to_lit [%here] apparg.x in
-        subst_prop_instance default_v arglit cty.phi
+        (arglit, subst_prop_instance default_v arglit cty.phi)
     | _ -> _die [%here]
   and over_arrow_type_apply (_ : rctx) appf_rty
       (apparg : (Nt.t rty, Nt.t value) typed) : Nt.t rty option =
@@ -258,7 +259,7 @@ let type_check_group (bctx : built_in_ctx) =
     in
     match argrty with
     | RtyArr _ ->
-        if not (subtyping rctx (apparg.ty, argrty) Prop.mk_true) then (
+        if not (subtyping rctx (apparg.ty, argrty) Prop.mk_true []) then (
           _warinning_subtyping_error [%here] (apparg.ty, argrty);
           _warinning_typing_error [%here]
             (layout_typed_value @@ (apparg#=>erase_rty), argrty);
@@ -328,7 +329,7 @@ let type_check_group (bctx : built_in_ctx) =
                   smart_and [ rhs.exists_prop; body.exists_prop ]
                 in
                 let call_constraints =
-                  smart_and [ rhs.call_constraints; body.call_constraints ]
+                  rhs.call_constraints @ body.call_constraints
                 in
                 Some
                   (infer_result
@@ -385,10 +386,9 @@ let type_check_group (bctx : built_in_ctx) =
                     p
                 | None -> Prop.mk_true
               in
-              let call_constraint = Prop.mk_true in
-              (* arrow_type_arg_prop appf_ty apparg.x#:apparg_rty *)
-              (* in *)
-              Pp.printf "call constraint: %s\n" (layout_prop call_constraint);
+              let call_constraint =
+                arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
+              in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               let retty =
                 remove_redundant_poly_pred
@@ -398,7 +398,7 @@ let type_check_group (bctx : built_in_ctx) =
               Some
                 (infer_result
                    (CApp { appf; apparg = apparg' })#:retty
-                   exists_prop call_constraint)
+                   exists_prop [ call_constraint ])
           | CAppOp { op; appopargs } ->
               let op =
                 op.x#:(_find_in_ctx [%here] rctx op#->op_name_for_typectx)
@@ -419,7 +419,7 @@ let type_check_group (bctx : built_in_ctx) =
                     over_arrow_type_apply rctx rty apparg.x#:apparg'.ty)
                   (Some op.ty) appopargs
               in
-              let op_arg_rtys = arrow_get_arg_rtys op.ty in
+              let op_arg_rtys = arrow_subarrow_rtys op.ty in
               let exists_prop =
                 let p = construct_call_ret_exists rctx retty in
                 Pp.printf "ret exists: %s\n" (layout_prop p);
@@ -430,7 +430,6 @@ let type_check_group (bctx : built_in_ctx) =
                   (fun (apparg, apparg') argrty ->
                     arrow_type_arg_prop argrty apparg.x#:apparg'.ty)
                   appopargs op_arg_rtys
-                |> smart_and
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               Some
@@ -447,7 +446,8 @@ let type_check_group (bctx : built_in_ctx) =
                 smart_and (List.map (fun x -> x.exists_prop) match_cases)
               in
               let call_constraints =
-                smart_and (List.map (fun x -> x.call_constraints) match_cases)
+                List.map (fun x -> x.call_constraints) match_cases
+                |> List.flatten
               in
               let unioned_ty =
                 union_rtys
@@ -508,8 +508,8 @@ let type_check_group (bctx : built_in_ctx) =
         | CLetDeTuple _ -> failwith "unimp"
         | CApp _ | CAppOp _ | CMatch _ | CLetE _ | CRecord _ | CField _ ->
             let* e' = term_type_infer rctx e in
-            if sub_rty rctx (e'.term.ty, rty) e'.exists_prop then
-              Some e'.term.x#:rty
+            if sub_rty rctx (e'.term.ty, rty) e'.exists_prop e'.call_constraints
+            then Some e'.term.x#:rty
             else (
               _warinning_subtyping_error [%here] (e'.term.ty, rty);
               _warinning_typing_error [%here] (layout_typed_term e, rty);
