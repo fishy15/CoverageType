@@ -9,13 +9,15 @@ let exists_fresh_v_prop cty =
   let prop = subst_prop_instance default_v (AVar var) prop in
   Exists { qv = var; body = prop }
 
-let possible_value_fv constraints prop fv fvrty =
+let possible_value_fv (rty_ctx : Nt.t rty Typectx.ctx) prop fv fvrty =
   let fv = fv.x in
   match fvrty with
   | RtyBase { ou = Under; cty } ->
       let var = Rename.unique_var fv in
       let prop_constraint =
-        List.assoc_opt (AVar fv#:cty.nty) constraints
+        Typectx.get_opt rty_ctx fv
+        |> Option.map (fun rty -> snd @@ destruct_base_rty rty)
+        |> Option.map (fun cty -> cty.phi)
         |> Option.value ~default:Prop.mk_true
       in
       let prop = smart_implies prop_constraint prop in
@@ -30,13 +32,25 @@ let merge_keep_snd xs ys =
   let xs = List.filter (fun x -> not (List.mem x ys)) xs in
   xs @ ys
 
-let relevant_fvs_in_ctx rctx rty =
+let remove_duplicates xs =
+  let rec aux acc xs =
+    match xs with
+    | [] -> List.rev acc
+    | x :: xs -> if List.mem x acc then aux acc xs else aux (x :: acc) xs
+  in
+  aux [] xs
+
+let relevant_fvs_in_ctx rty_ctx rty =
   let rec aux rty =
-    let fvs = fv_rty rty in
+    (* Pp.printf "rty: %s\n" (layout_rty rty); *)
+    let fvs = remove_duplicates (fv_rty rty) in
+    (* Pp.printf "fvs: "; *)
+    (* List.iter (fun fv -> Pp.printf "%s " fv.x) fvs; *)
+    (* print_newline (); *)
     let fvs_of_fvs =
       List.map
         (fun fv ->
-          match Typectx.get_opt rctx.rty_ctx fv.x with
+          match Typectx.get_opt rty_ctx fv.x with
           | Some rty -> aux rty
           | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
         fvs
@@ -45,12 +59,19 @@ let relevant_fvs_in_ctx rctx rty =
   in
   aux rty
 
-let construct_call_ret_exists rctx retty constraints =
-  let fvs = relevant_fvs_in_ctx rctx retty in
+let construct_call_ret_exists rctx localctx retty =
+  (* prefer local context over global context *)
+  let local_missing s =
+    match Typectx.get_opt localctx s with Some _ -> false | None -> true
+  in
+  let global_nolocalctx = Typectx.filter_ctx_name local_missing rctx.rty_ctx in
+  let rty_ctx = Typectx.concat localctx global_nolocalctx in
+  Pp.printf "rty ctx: %s\n" (Typectx.layout_ctx layout_rty rty_ctx);
+  let fvs = relevant_fvs_in_ctx rty_ctx retty in
   let fvrtys =
     List.map
       (fun fv ->
-        match Typectx.get_opt rctx.rty_ctx fv.x with
+        match Typectx.get_opt rty_ctx fv.x with
         | Some rty -> rty
         | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
       fvs
@@ -62,9 +83,9 @@ let construct_call_ret_exists rctx retty constraints =
     fvs fvrtys;
   print_newline ();
   Printf.printf "call constraints:";
-  List.iter
-    (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p))
-    constraints;
+  (* List.iter *)
+  (*   (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p)) *)
+  (*   localctx; *)
   print_newline ();
   let retcty =
     match retty with
@@ -72,4 +93,4 @@ let construct_call_ret_exists rctx retty constraints =
     | _ -> _die_with [%here] "unimp"
   in
   let prop = exists_fresh_v_prop retcty in
-  List.fold_left2 (possible_value_fv constraints) prop fvs fvrtys
+  List.fold_left2 (possible_value_fv rty_ctx) prop fvs fvrtys

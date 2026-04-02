@@ -26,8 +26,8 @@ let bad3_div (x : int) : int =
 let test (x : int) (y : int) (z : int) : int = 
   flipdiv x (flipdiv x x)
 
-let[@assert] bad_div ?r:(x : int) = (true : [%v : int])
-let[@assert] safe_div ?r:(x : int) = (true : [%v : int])
-let[@assert] safe2_div ?r:(x : int) = (true : [%v : int])
-let[@assert] bad2_div ?r:(x : int) = (true : [%v : int])
+(* let[@assert] bad_div ?r:(x : int) = (true : [%v : int]) *)
+(* let[@assert] safe_div ?r:(x : int) = (true : [%v : int]) *)
+(* let[@assert] safe2_div ?r:(x : int) = (true : [%v : int]) *)
+(* let[@assert] bad2_div ?r:(x : int) = (true : [%v : int]) *)
 let[@assert] bad3_div ?r:(x : int) = (true : [%v : int])

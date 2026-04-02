@@ -248,7 +248,7 @@ let type_check_group (bctx : built_in_ctx) =
     in
     aux appf_rty
   and arrow_type_arg_prop appf_rty (apparg : (Nt.t rty, Nt.t value) typed) :
-      Nt.t lit * Nt.t prop =
+      Nt.t rty =
     let argrty, _, _ = destruct_arr_rty [%here] appf_rty in
     let () =
       Pp.printf "app basic type check: %s vs %s\n" (layout_rty argrty)
@@ -258,8 +258,12 @@ let type_check_group (bctx : built_in_ctx) =
     in
     match argrty with
     | RtyBase { ou = Over; cty } ->
-        let arglit = value_to_lit [%here] apparg.x in
-        (arglit, subst_prop_instance default_v arglit cty.phi)
+        let appargrty = apparg.ty in
+        map_rty_retty
+          (fun cty' ->
+            let phi = smart_and [ cty.phi; cty'.phi ] in
+            { cty with phi })
+          appargrty
     | _ -> _die [%here]
   and over_arrow_type_apply (_ : rctx) appf_rty
       (apparg : (Nt.t rty, Nt.t value) typed) : Nt.t rty option =
@@ -414,15 +418,25 @@ let type_check_group (bctx : built_in_ctx) =
                   _die [%here]
               in
               (* TODO: add the constraint here *)
-              let call_constraint =
-                arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
+              let localctx =
+                let localctx = Typectx.concat appf.localctx apparg'.localctx in
+                let call_constraint =
+                  arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
+                in
+                Pp.printf "app arg rty: %s\n" (layout_rty call_constraint);
+                match apparg.x with
+                | VVar { x = v; _ } ->
+                    let localctx =
+                      Typectx.add_to_right localctx v#:call_constraint
+                    in
+                    localctx
+                | VConst _ -> localctx
+                | _ -> _die_with [%here] "unimp"
               in
               let exists_prop =
                 let prop =
                   if is_arr_ret_arr appf_ty then None
-                  else
-                    Some
-                      (construct_call_ret_exists rctx retty [ call_constraint ])
+                  else Some (construct_call_ret_exists rctx localctx retty)
                 in
                 match prop with
                 | Some p ->
@@ -430,11 +444,9 @@ let type_check_group (bctx : built_in_ctx) =
                     p
                 | None -> Prop.mk_true
               in
-              (* combine results from arguments *)
               let exists_prop =
                 smart_and [ exists_prop; appf.exists_prop; apparg'.exists_prop ]
               in
-              let localctx = Typectx.concat appf.localctx apparg'.localctx in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               let retty =
                 remove_redundant_poly_pred
@@ -469,14 +481,14 @@ let type_check_group (bctx : built_in_ctx) =
                   (Some op.ty) appopargs.term
               in
               let op_arg_rtys = arrow_subarrow_rtys op.ty in
-              let call_constraints =
+              let _call_constraints =
                 List.map2
                   (fun (apparg, apparg') argrty ->
                     arrow_type_arg_prop argrty apparg.x#:apparg'.ty)
                   appopargs.term op_arg_rtys
               in
               let exists_prop =
-                let p = construct_call_ret_exists rctx retty call_constraints in
+                let p = construct_call_ret_exists rctx Typectx.emp retty in
                 Pp.printf "ret exists: %s\n" (layout_prop p);
                 p
               in
