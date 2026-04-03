@@ -11,6 +11,14 @@ let value_infer_mode = PolyPredParam
 
 type localctx = Nt.t rty Typectx.ctx
 
+let intersect_rty rty1 rty2 =
+  assert (Nt.equal_nt (erase_rty rty1) (erase_rty rty2));
+  match (rty1, rty2) with
+  | RtyBase { ou = Under; cty = cty1 }, RtyBase { ou = Under; cty = cty2 } ->
+      let phi = smart_and [ cty1.phi; cty2.phi ] in
+      RtyBase { ou = Under; cty = { cty1 with phi } }
+  | _ -> _die_with [%here] "can only take intersection of base rty"
+
 module InferResult = struct
   type 'a t = { term : 'a; exists_prop : Nt.t prop; localctx : localctx }
 
@@ -21,14 +29,22 @@ module InferResult = struct
 
   let map f v = { v with term = f v.term }
 
-  let result_list_to_list_result vs =
-    let term = List.map (fun v -> v.term) vs in
-    let exists_prop = List.map (fun v -> v.exists_prop) vs |> smart_and in
-    let localctx =
-      List.map (fun v -> v.localctx) vs
-      |> List.fold_left Typectx.concat Typectx.emp
-    in
+  let combine { term = term1; exists_prop = exists_prop1; localctx = localctx1 }
+      { term = term2; exists_prop = exists_prop2; localctx = localctx2 } =
+    let term = (term1, term2) in
+    let exists_prop = smart_and [ exists_prop1; exists_prop2 ] in
+    let localctx = Typectx.concat_update localctx1 localctx2 intersect_rty in
     { term; exists_prop; localctx }
+
+  let result_list_to_list_result vs =
+    let acc =
+      { term = []; exists_prop = Prop.mk_true; localctx = Typectx.emp }
+    in
+    List.fold_left
+      (fun acc v ->
+        let { term = h, t; exists_prop; localctx } = combine v acc in
+        { term = h :: t; exists_prop; localctx })
+      acc vs
 
   let replace_term (newterm : 'a) (old : 'b t) = { old with term = newterm }
 end
@@ -427,18 +443,7 @@ let type_check_group (bctx : built_in_ctx) =
                 match apparg.x with
                 | VVar { x = v; _ } ->
                     let localctx =
-                      Typectx.update_or_add localctx
-                        (fun oldrty newrty ->
-                          assert (
-                            Nt.equal_nt (erase_rty oldrty) (erase_rty newrty));
-                          match (oldrty, newrty) with
-                          | ( RtyBase { ou = Under; cty = oldcty },
-                              RtyBase { ou = Under; cty = newcty } ) ->
-                              let phi = smart_and [ oldcty.phi; newcty.phi ] in
-                              RtyBase { ou = Under; cty = { oldcty with phi } }
-                          | _ ->
-                              _die_with [%here]
-                                "can only take intersection of base rty")
+                      Typectx.update_or_add localctx intersect_rty
                         v#:call_constraint
                     in
                     localctx
