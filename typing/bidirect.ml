@@ -59,11 +59,6 @@ let type_check_group (bctx : built_in_ctx) =
         rty
     | None -> _die_with loc (spf "cannot find %s in type context" id.x)
   in
-  let _id_type_infer loc (rctx : rctx) (id : (Nt.t, string) typed) : Nt.t rty =
-    let rty = _find_in_ctx loc rctx id in
-    (* NOTE: both over and under type will induce under type *)
-    if is_base_rty rty then mk_eq_tvar_underrty id.x#:(erase_rty rty) else rty
-  in
   let subtyping rctx (rty1, rty2) exists_prop =
     pprint_typing_subtyping rctx (rty1, rty2);
     sub_rty rctx (rty1, rty2) exists_prop
@@ -386,7 +381,9 @@ let type_check_group (bctx : built_in_ctx) =
                 let exists_prop =
                   smart_and [ rhs.exists_prop; body.exists_prop ]
                 in
-                let localctx = Typectx.concat rhs.localctx body.localctx in
+                let localctx =
+                  Typectx.concat_update rhs.localctx body.localctx intersect_rty
+                in
                 Some
                   (InferResult.mk
                      (CLetE { rhs = rhs.term; lhs; body = body.term })#:rty
@@ -435,7 +432,10 @@ let type_check_group (bctx : built_in_ctx) =
               in
               (* TODO: add the constraint here *)
               let localctx =
-                let localctx = Typectx.concat appf.localctx apparg'.localctx in
+                let localctx =
+                  Typectx.concat_update appf.localctx apparg'.localctx
+                    intersect_rty
+                in
                 let call_constraint =
                   arrow_type_arg_prop appf_ty apparg.x#:apparg_rty
                 in
@@ -540,7 +540,8 @@ let type_check_group (bctx : built_in_ctx) =
                 smart_and [ match_cases.exists_prop; matched.exists_prop ]
               in
               let localctx =
-                Typectx.concat match_cases.localctx matched.localctx
+                Typectx.concat_update match_cases.localctx matched.localctx
+                  intersect_rty
               in
               Some
                 (InferResult.mk
