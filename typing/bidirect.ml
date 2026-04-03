@@ -40,11 +40,11 @@ module InferResult = struct
     let acc =
       { term = []; exists_prop = Prop.mk_true; localctx = Typectx.emp }
     in
-    List.fold_left
-      (fun acc v ->
+    List.fold_right
+      (fun v acc ->
         let { term = h, t; exists_prop; localctx } = combine v acc in
         { term = h :: t; exists_prop; localctx })
-      acc vs
+      vs acc
 
   let replace_term (newterm : 'a) (old : 'b t) = { old with term = newterm }
 end
@@ -494,6 +494,10 @@ let type_check_group (bctx : built_in_ctx) =
                 List.fold_left
                   (fun res (apparg, apparg') ->
                     let* rty = res in
+                    let _ =
+                      Pp.printf "over arrow apply types: %s %s\n"
+                        (layout_rty rty) (layout_rty apparg'.ty)
+                    in
                     over_arrow_type_apply rctx rty apparg.x#:apparg'.ty)
                   (Some op.ty) appopargs.term
               in
