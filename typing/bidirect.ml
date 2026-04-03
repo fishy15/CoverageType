@@ -60,7 +60,7 @@ let type_check_group (bctx : built_in_ctx) =
       | VVar id ->
           Pp.printf "infer variable %s\n" id.x;
           let () = if String.equal id.x "None" then _die [%here] in
-          let rty = _id_type_infer [%here] rctx id in
+          let rty = _find_in_ctx [%here] rctx id in
           let res = Some (VVar id.x#:rty)#:rty in
           if Myconfig.get_bool_option "show_type_infer_variable_judgement" then
             pprint_typing_infer_value_after rctx (v, res);
