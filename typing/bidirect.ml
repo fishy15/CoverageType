@@ -427,7 +427,19 @@ let type_check_group (bctx : built_in_ctx) =
                 match apparg.x with
                 | VVar { x = v; _ } ->
                     let localctx =
-                      Typectx.add_to_right localctx v#:call_constraint
+                      Typectx.update_or_add localctx
+                        (fun oldrty newrty ->
+                          assert (
+                            Nt.equal_nt (erase_rty oldrty) (erase_rty newrty));
+                          match (oldrty, newrty) with
+                          | ( RtyBase { ou = Under; cty = oldcty },
+                              RtyBase { ou = Under; cty = newcty } ) ->
+                              let phi = smart_and [ oldcty.phi; newcty.phi ] in
+                              RtyBase { ou = Under; cty = { oldcty with phi } }
+                          | _ ->
+                              _die_with [%here]
+                                "can only take intersection of base rty")
+                        v#:call_constraint
                     in
                     localctx
                 | VConst _ -> localctx
