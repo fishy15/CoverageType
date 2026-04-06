@@ -44,6 +44,7 @@ let rec sub_rty rctx (rty1, rty2) exists_prop =
 
 let non_emptiness_rty rctx rty =
   let () = Statistic.stat_count_qeury rctx.task_name in
+  Pp.printf "non-emptiness: %s\n" (layout_rty rty);
   match rty with
   | RtyBase { ou = Under; cty } -> non_emptiness_cty rctx cty
   | RtyArr _ -> true

@@ -369,6 +369,9 @@ let type_check_group (bctx : built_in_ctx) =
               Some (InferResult.map (fun rd -> (CField { rd; field })#:rty) rd)
           | CLetE { rhs; lhs; body } ->
               let* rhs' = term_type_infer rctx lctx rhs in
+              Pp.printf "lhs var: %s\n" lhs.x;
+              Pp.printf "rhs term: %s\n" (layout_typed_term rhs);
+              Pp.printf "body term: %s\n" (layout_typed_term body);
               if not (non_emptiness_rty rctx rhs'.term.ty) then (
                 _warinning_nonemptiness_error [%here] rhs'.term.ty;
                 _warinning_typing_error [%here] (layout_term rhs.x, rhs'.term.ty);

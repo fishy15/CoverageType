@@ -61,11 +61,9 @@ let relevant_fvs_in_ctx rty_ctx rty =
 
 let construct_call_ret_exists rctx localctx retty =
   (* prefer local context over global context *)
-  let local_missing s =
-    match Typectx.get_opt localctx s with Some _ -> false | None -> true
+  let rty_ctx =
+    Typectx.concat_update rctx.rty_ctx localctx (fun _global local -> local)
   in
-  let global_nolocalctx = Typectx.filter_ctx_name local_missing rctx.rty_ctx in
-  let rty_ctx = Typectx.concat localctx global_nolocalctx in
   Pp.printf "rty ctx: %s\n" (Typectx.layout_ctx layout_rty rty_ctx);
   let fvs = relevant_fvs_in_ctx rty_ctx retty in
   let fvrtys =
@@ -93,4 +91,4 @@ let construct_call_ret_exists rctx localctx retty =
     | _ -> _die_with [%here] "unimp"
   in
   let prop = exists_fresh_v_prop retcty in
-  List.fold_left2 (possible_value_fv rty_ctx) prop fvs fvrtys
+  fresh_name_prop @@ List.fold_left2 (possible_value_fv rty_ctx) prop fvs fvrtys
