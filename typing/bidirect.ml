@@ -62,6 +62,11 @@ let type_check_group (bctx : built_in_ctx) =
         rty
     | None -> _die_with loc (spf "cannot find %s in type context" id.x)
   in
+  let _id_type_infer loc (rctx : rctx) (id : (Nt.t, string) typed) : Nt.t rty =
+    let rty = _find_in_ctx loc rctx id in
+    (* NOTE: both over and under type will induce under type *)
+    if is_base_rty rty then mk_eq_tvar_underrty id.x#:(erase_rty rty) else rty
+  in
   let subtyping rctx (rty1, rty2) exists_prop =
     pprint_typing_subtyping rctx (rty1, rty2);
     sub_rty rctx (rty1, rty2) exists_prop
@@ -74,7 +79,7 @@ let type_check_group (bctx : built_in_ctx) =
       | VVar id ->
           Pp.printf "infer variable %s\n" id.x;
           let () = if String.equal id.x "None" then _die [%here] in
-          let rty = _find_in_ctx [%here] rctx id in
+          let rty = _id_type_infer [%here] rctx id in
           let res = Some (VVar id.x#:rty)#:rty in
           if Myconfig.get_bool_option "show_type_infer_variable_judgement" then
             pprint_typing_infer_value_after rctx (v, res);

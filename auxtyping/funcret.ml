@@ -52,9 +52,14 @@ let remove_duplicates xs =
   aux [] xs
 
 let relevant_fvs_in_ctx rty_ctx rty =
-  let rec aux rty =
+  let rec aux varname rty =
     (* Pp.printf "rty: %s\n" (layout_rty rty); *)
     let fvs = remove_duplicates (fv_rty rty) in
+    let fvs =
+      List.filter
+        (fun fv -> match varname with Some x -> x <> fv.x | None -> true)
+        fvs
+    in
     (* Pp.printf "fvs: "; *)
     (* List.iter (fun fv -> Pp.printf "%s " fv.x) fvs; *)
     (* print_newline (); *)
@@ -62,13 +67,15 @@ let relevant_fvs_in_ctx rty_ctx rty =
       List.map
         (fun fv ->
           match Typectx.get_opt rty_ctx fv.x with
-          | Some rty -> aux rty
+          (* remove self loops *)
+          | Some rty ->
+              List.filter (fun v -> v.x <> fv.x) @@ aux (Some fv.x) rty
           | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
         fvs
     in
     List.fold_left merge_keep_snd fvs fvs_of_fvs
   in
-  aux rty
+  aux None rty
 
 let construct_call_ret_exists rctx localctx retty =
   if no_exists_needed_ty retty then Prop.mk_true
