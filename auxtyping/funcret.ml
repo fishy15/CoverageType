@@ -28,6 +28,9 @@ let possible_value_fv (rty_ctx : Nt.t rty Typectx.ctx) prop fv fvrty =
         |> Option.map (fun cty -> cty.phi)
         |> Option.value ~default:Prop.mk_true
       in
+      let prop_constraint =
+        subst_prop_instance default_v (AVar fv#:cty.nty) prop_constraint
+      in
       let prop = smart_implies prop_constraint prop in
       let prop = subst_prop_instance fv (AVar var#:cty.nty) prop in
       smart_dependent_forall (var, cty) prop
@@ -89,11 +92,6 @@ let construct_call_ret_exists rctx localctx retty =
     List.iter2
       (fun fv fvrty -> Printf.printf "%s <%s> " fv.x (layout_rty fvrty))
       fvs fvrtys;
-    print_newline ();
-    Printf.printf "call constraints:";
-    (* List.iter *)
-    (*   (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p)) *)
-    (*   localctx; *)
     print_newline ();
     let retcty =
       match retty with
