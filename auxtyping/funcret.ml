@@ -2,6 +2,14 @@ open Auxprop
 open Language
 open Zutils
 
+(* solver already knows that all values exist, so we can optimize out the existential *)
+let no_exists_needed_ty rty =
+  match rty with
+  | RtyBase { cty = { nty; _ }; _ } ->
+      nty = Nt.int_ty || nty = Nt.bool_ty || nty = Nt.nat_ty || nty = Nt.char_ty
+      || nty = Nt.float_ty
+  | _ -> false
+
 let exists_fresh_v_prop cty =
   let prop, nty = (cty.phi, cty.nty) in
   let var = Rename.fresh_var () in
@@ -60,35 +68,38 @@ let relevant_fvs_in_ctx rty_ctx rty =
   aux rty
 
 let construct_call_ret_exists rctx localctx retty =
-  (* prefer local context over global context *)
-  let rty_ctx =
-    Typectx.concat_update rctx.rty_ctx localctx (fun _global local -> local)
-  in
-  Pp.printf "rty ctx: %s\n" (Typectx.layout_ctx layout_rty rty_ctx);
-  let fvs = relevant_fvs_in_ctx rty_ctx retty in
-  let fvrtys =
-    List.map
-      (fun fv ->
-        match Typectx.get_opt rty_ctx fv.x with
-        | Some rty -> rty
-        | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
-      fvs
-  in
-  Pp.printf "retty: %s\n" (layout_rty retty);
-  Pp.printf "fvs: ";
-  List.iter2
-    (fun fv fvrty -> Printf.printf "%s <%s> " fv.x (layout_rty fvrty))
-    fvs fvrtys;
-  print_newline ();
-  Printf.printf "call constraints:";
-  (* List.iter *)
-  (*   (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p)) *)
-  (*   localctx; *)
-  print_newline ();
-  let retcty =
-    match retty with
-    | RtyBase { ou = Under; cty } -> cty
-    | _ -> _die_with [%here] "unimp"
-  in
-  let prop = exists_fresh_v_prop retcty in
-  fresh_name_prop @@ List.fold_left2 (possible_value_fv rty_ctx) prop fvs fvrtys
+  if no_exists_needed_ty retty then Prop.mk_true
+  else
+    (* prefer local context over global context *)
+    let rty_ctx =
+      Typectx.concat_update rctx.rty_ctx localctx (fun _global local -> local)
+    in
+    Pp.printf "rty ctx: %s\n" (Typectx.layout_ctx layout_rty rty_ctx);
+    let fvs = relevant_fvs_in_ctx rty_ctx retty in
+    let fvrtys =
+      List.map
+        (fun fv ->
+          match Typectx.get_opt rty_ctx fv.x with
+          | Some rty -> rty
+          | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
+        fvs
+    in
+    Pp.printf "retty: %s\n" (layout_rty retty);
+    Pp.printf "fvs: ";
+    List.iter2
+      (fun fv fvrty -> Printf.printf "%s <%s> " fv.x (layout_rty fvrty))
+      fvs fvrtys;
+    print_newline ();
+    Printf.printf "call constraints:";
+    (* List.iter *)
+    (*   (fun (v, p) -> Printf.printf "( %s : %s ) " (layout_lit v) (layout_prop p)) *)
+    (*   localctx; *)
+    print_newline ();
+    let retcty =
+      match retty with
+      | RtyBase { ou = Under; cty } -> cty
+      | _ -> _die_with [%here] "unimp"
+    in
+    let prop = exists_fresh_v_prop retcty in
+    fresh_name_prop
+    @@ List.fold_left2 (possible_value_fv rty_ctx) prop fvs fvrtys
