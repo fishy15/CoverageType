@@ -1,4 +1,3 @@
-open Auxprop
 open Language
 open Zutils
 
@@ -17,23 +16,17 @@ let exists_fresh_v_prop cty =
   let prop = subst_prop_instance default_v (AVar var) prop in
   Exists { qv = var; body = prop }
 
-let possible_value_fv (rty_ctx : Nt.t rty Typectx.ctx) prop fv fvrty =
+let possible_value_fv prop fv fvrty =
   let fv = fv.x in
   match fvrty with
   | RtyBase { ou = Under; cty } ->
       let var = Rename.unique_var fv in
-      let prop_constraint =
-        Typectx.get_opt rty_ctx fv
-        |> Option.map (fun rty -> snd @@ destruct_base_rty rty)
-        |> Option.map (fun cty -> cty.phi)
-        |> Option.value ~default:Prop.mk_true
+      let convert p =
+        p
+        |> subst_prop_instance default_v (AVar fv#:cty.nty)
+        |> subst_prop_instance fv (AVar var#:cty.nty)
       in
-      let prop_constraint =
-        subst_prop_instance default_v (AVar fv#:cty.nty) prop_constraint
-      in
-      let prop = smart_implies prop_constraint prop in
-      let prop = subst_prop_instance fv (AVar var#:cty.nty) prop in
-      smart_dependent_forall (var, cty) prop
+      smart_forall_phi (var#:cty.nty, convert cty.phi) (convert prop)
   | RtyBase { ou = Over; _ } ->
       (* let variable refer to that same value *)
       prop
@@ -68,8 +61,7 @@ let relevant_fvs_in_ctx rty_ctx rty =
         (fun fv ->
           match Typectx.get_opt rty_ctx fv.x with
           (* remove self loops *)
-          | Some rty ->
-              List.filter (fun v -> v.x <> fv.x) @@ aux (Some fv.x) rty
+          | Some rty -> aux (Some fv.x) rty
           | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
         fvs
     in
@@ -81,9 +73,7 @@ let construct_call_ret_exists rctx localctx retty =
   if no_exists_needed_ty retty then Prop.mk_true
   else
     (* prefer local context over global context *)
-    let rty_ctx =
-      Typectx.concat_update rctx.rty_ctx localctx (fun _global local -> local)
-    in
+    let rty_ctx = Typectx.concat_update rctx.rty_ctx localctx intersect_rty in
     Pp.printf "rty ctx: %s\n" (Typectx.layout_ctx layout_rty rty_ctx);
     let fvs = relevant_fvs_in_ctx rty_ctx retty in
     let fvrtys =
@@ -106,5 +96,4 @@ let construct_call_ret_exists rctx localctx retty =
       | _ -> _die_with [%here] "unimp"
     in
     let prop = exists_fresh_v_prop retcty in
-    fresh_name_prop
-    @@ List.fold_left2 (possible_value_fv rty_ctx) prop fvs fvrtys
+    fresh_name_prop @@ List.fold_left2 possible_value_fv prop fvs fvrtys

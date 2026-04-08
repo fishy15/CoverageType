@@ -603,3 +603,12 @@ let counter_rty_qt_qpred (rty : Nt.t rty) : int * int =
     | _ -> (qt, qpred)
   in
   aux (0, 0) rty
+
+let intersect_rty rty1 rty2 =
+  assert (Nt.equal_nt (erase_rty rty1) (erase_rty rty2));
+  match (rty1, rty2) with
+  | RtyBase { ou = ou1; cty = cty1 }, RtyBase { ou = ou2; cty = cty2 } ->
+      let ou = if ou1 = Over && ou2 = Over then Over else Under in
+      let phi = smart_and [ cty1.phi; cty2.phi ] in
+      RtyBase { ou; cty = { cty1 with phi } }
+  | _ -> _die_with [%here] "can only take intersection of base rty"

@@ -11,17 +11,6 @@ let value_infer_mode = PolyPredParam
 
 type localctx = Nt.t rty Typectx.ctx
 
-let intersect_rty rty1 rty2 =
-  assert (Nt.equal_nt (erase_rty rty1) (erase_rty rty2));
-  Pp.printf "intersecting rty: %s and %s\n" (layout_rty rty1) (layout_rty rty2);
-  match (rty1, rty2) with
-  | RtyBase { ou = ou1; cty = cty1 }, RtyBase { ou = ou2; cty = cty2 } ->
-      if ou1 = ou2 then
-        let phi = smart_and [ cty1.phi; cty2.phi ] in
-        RtyBase { ou = ou1; cty = { cty1 with phi } }
-      else _die_with [%here] "cannot intersect rty with different ou"
-  | _ -> _die_with [%here] "can only take intersection of base rty"
-
 module InferResult = struct
   type 'a t = { term : 'a; exists_prop : Nt.t prop; localctx : localctx }
 
