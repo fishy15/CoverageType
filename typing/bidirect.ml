@@ -594,7 +594,10 @@ let type_check_group (bctx : built_in_ctx) =
         let () = pprint_typing_check_term rctx (e, rty) in
         match e.x with
         | CVal _ -> _die [%here]
-        | CErr -> Some CErr#:rty
+        | CErr ->
+            if sub_rty rctx (mk_bot_underrty (erase_rty rty), rty) Prop.mk_true
+            then Some CErr#:rty
+            else None
         | CLetDeTuple _ -> failwith "unimp"
         | CApp _ | CAppOp _ | CMatch _ | CLetE _ | CRecord _ | CField _ ->
             let* e' = term_type_infer rctx lctx e in
