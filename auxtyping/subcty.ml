@@ -113,7 +113,7 @@ let sub_cty ou rctx cty1 cty2 exists_prop =
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty1.nty) ])
           prop
-    | Under, None, None ->
+    | Under, eqv1, eqv2 when eqv1 = eqv2 ->
         let rhs =
           List.fold_right smart_dependent_exists underctx
             (fresh_name_prop cty1.phi)

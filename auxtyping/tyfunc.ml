@@ -71,17 +71,27 @@ let exists_rty x rty =
 
 let exists_rtys = List.fold_right exists_rty
 
+let common_eqv ctys =
+  List.fold_left
+    (fun acc cty ->
+      let { eqv = eqv'; _ } = cty in
+      match (acc, eqv') with
+      | Some eqv, Some eqv' when eqv <> eqv' ->
+          _die_with [%here] "cannot merge two different eqv types"
+      | Some eqv, _ -> Some eqv
+      | _, eqv' -> eqv')
+    None ctys
+
 let n_to_one_ctys prop_f = function
   | [] -> _die [%here]
-  | { nty; phi; eqv = None } :: ctys ->
-      if
-        List.for_all (function { nty = nty'; _ } -> Nt.equal_nt nty nty') ctys
-      then
+  | cty :: ctys ->
+      let { nty; phi; _ } = cty in
+      if List.for_all (fun { nty = nty'; _ } -> Nt.equal_nt nty nty') ctys then
+        let eqv = common_eqv (cty :: ctys) in
         let phis = phi :: List.map (function { phi; _ } -> phi) ctys in
         let phis = List.map _simp_prop phis in
-        { nty; phi = prop_f phis; eqv = None }
+        { nty; phi = prop_f phis; eqv }
       else _die [%here]
-  | _ -> _die_with [%here] "eqv unimpl"
 
 let union_ctys = n_to_one_ctys smart_or
 
