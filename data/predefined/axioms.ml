@@ -1050,21 +1050,21 @@ let[@axiom] tail_shrink =
 
 (** Tree equivalences *)
 
-(* let[@axiom] eqv_spine_definition = *)
-(*   fun (t1 : 'a btree) (t2 : 'a btree)  -> *)
-(*     iff (eqv_spine t1 t2) *)
-(*       ((btree_leaf t1 && btree_leaf t2) || *)
-(*       (fun (lch1 : 'a btree) (lch2 : 'a btree) (rch1 : 'a btree) (rch2 : 'a btree) -> *)
-(*         (btree_lch t1 lch1 && btree_rch t1 rch1 && btree_lch t2 lch2 && btree_rch t2 rch2) && *)
-(*         (eqv_spine lch1 lch2) && (eqv_spine rch1 rch2))) *)
-(**)
-(* let[@axiom] eqv_spine_refl = *)
-(*   fun (l : 'a btree) -> eqv_spine l l *)
-(**)
-(* let[@axiom] eqv_spine_sym = *)
-(*   fun (l1 : 'a btree) (l2 : 'a btree) ->  *)
-(*     implies (eqv_spine l1 l2) (eqv_spine l2 l1) *)
-(**)
-(* let[@axiom] eqv_spine_trans = *)
-(*   fun (l1 : 'a btree) (l2 : 'a btree) (l3 : 'a btree) ->  *)
-(*     implies (eqv_spine l1 l2 && eqv_spine l2 l3) (eqv_spine l1 l3) *)
+let[@axiom] eqv_spine_definition =
+  fun (t1 : 'a tree) (t2 : 'a tree)  ->
+    iff (eqv_spine t1 t2)
+      ((depth t1 == 0 && depth t2 == 0) ||
+      (fun (lch1 : 'a tree) (lch2 : 'a tree) (rch1 : 'a tree) (rch2 : 'a tree) ->
+        (lch t1 lch1 && rch t1 rch1 && lch t2 lch2 && rch t2 rch2) &&
+        (eqv_spine lch1 lch2) && (eqv_spine rch1 rch2)))
+
+let[@axiom] eqv_spine_refl =
+  fun (l : 'a tree) -> eqv_spine l l
+
+let[@axiom] eqv_spine_sym =
+  fun (l1 : 'a tree) (l2 : 'a tree) -> 
+    implies (eqv_spine l1 l2) (eqv_spine l2 l1)
+
+let[@axiom] eqv_spine_trans =
+  fun (l1 : 'a tree) (l2 : 'a tree) (l3 : 'a tree) -> 
+    implies (eqv_spine l1 l2 && eqv_spine l2 l3) (eqv_spine l1 l3)
