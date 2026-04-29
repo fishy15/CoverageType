@@ -251,3 +251,12 @@ let[@library] swap =
      ?r:(i = ((0 <= v && v < list_len l : [%v: int]) [@over]))
      ?r:(j = ((0 <= v && v < list_len l : [%v: int]) [@over])) ->
   (true : [%v: 'a list])
+
+
+(* Equivalence related *)
+
+let[@library] node_eqv_spine =
+  fun (a : baseType) ?r:(x : 'a)
+    ?r:(lt = (true : [%v : 'a tree]) [@eqv eqv_spine] [@over])
+    ?r:(rt = (true : [%v : 'a tree]) [@eqv eqv_spine] [@over]) ->
+  (lch v lt && rch v rt : [%v: 'a tree])
