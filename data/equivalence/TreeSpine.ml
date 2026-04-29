@@ -20,4 +20,4 @@ let[@assert] gen_spine ?r:(dep = (v >= 0 : [%v: int]) [@over]) =
   (depth v <= dep : [%v: int tree]) [@eqv eqv_spine]
 
 let[@assert] gen_line ?r:(dep = (v >= 0 : [%v: int]) [@over]) =
-  (depth v == dep && tree_num_leaf v (dep + 1) : [%v: int tree]) [@eqv eqv_spine]
+  (depth v == dep && tree_num_leaf v == (dep + 1) : [%v: int tree]) [@eqv eqv_spine]

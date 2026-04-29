@@ -54,7 +54,17 @@ let type_check_group (bctx : built_in_ctx) =
   let _id_type_infer loc (rctx : rctx) (id : (Nt.t, string) typed) : Nt.t rty =
     let rty = _find_in_ctx loc rctx id in
     (* NOTE: both over and under type will induce under type *)
-    if is_base_rty rty then mk_eq_tvar_underrty id.x#:(erase_rty rty) else rty
+    let eqv =
+      match rty with RtyBase { cty = { eqv; _ }; _ } -> eqv | _ -> None
+    in
+    let rty =
+      if is_base_rty rty then mk_eq_tvar_underrty id.x#:(erase_rty rty) else rty
+    in
+    match rty with
+    | RtyBase { ou; cty } ->
+        let cty = { cty with eqv } in
+        RtyBase { ou; cty }
+    | _ -> rty
   in
   let subtyping rctx (rty1, rty2) exists_prop =
     pprint_typing_subtyping rctx (rty1, rty2);
@@ -265,12 +275,22 @@ let type_check_group (bctx : built_in_ctx) =
         (Nt.equal_nt (erase_rty argrty) (erase_rty apparg.ty))
     in
     match argrty with
-    | RtyBase { ou = Over; cty } ->
+    | RtyBase { ou = Over; cty = argcty } ->
         let appargrty = apparg.ty in
+        let _, appargcty = destruct_base_rty appargrty in
+        let eqv =
+          match (argcty, appargcty) with
+          | _, { eqv = None; _ } -> None
+          | { eqv = Some argeqv; _ }, { eqv = Some appargeqv; _ } ->
+              _assert [%here] "application eqv check" (argeqv = appargeqv);
+              Some argeqv
+          | { eqv = None; _ }, _ ->
+              _die_with [%here] "cannot apply apparg under eqv to non-eqv arg"
+        in
         map_rty_retty
           (fun cty' ->
-            let phi = smart_and [ cty.phi; cty'.phi ] in
-            { cty with phi })
+            let phi = smart_and [ argcty.phi; cty'.phi ] in
+            { argcty with phi; eqv })
           appargrty
     | _ -> _die [%here]
   and over_arrow_type_apply (_ : rctx) appf_rty
