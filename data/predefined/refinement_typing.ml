@@ -255,6 +255,11 @@ let[@library] swap =
 
 (* Equivalence related *)
 
+let[@library] cons_eqv_set =
+  fun (a : baseType) ?r:(h : 'a)
+    ?r:(t = (true : [%v : 'a list]) [@eqv eqv_set] [@over]) ->
+  (hd v h && tl v t : [%v: 'a list]) [@eqv eqv_set]
+
 let[@library] node_eqv_spine =
   fun (a : baseType) ?r:(x : 'a)
     ?r:(lt = (true : [%v : 'a tree]) [@eqv eqv_spine] [@over])

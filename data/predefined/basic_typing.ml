@@ -339,6 +339,7 @@ val pt_term_size : pt_term -> int
 (** Equivalences *)
 
 val eqv_set : int list -> int list -> bool
+val cons_eqv_set : 'a -> 'a list -> 'a list
 val eqv_eq : int list -> int list -> bool
 val eqv_spine : 'a tree -> 'a tree -> bool
 val node_eqv_spine : 'a -> 'a tree -> 'a tree -> 'a tree
