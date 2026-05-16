@@ -6,5 +6,5 @@ let rec ord_gen (n : int) (lo : int) (hi : int) : int list =
     ord_gen n (lo + 1) hi
 
 let[@assert] ord_gen ?r:(n = ((v >= 0 : [%v: int]) [@over])) ?r:(lo : int) ?r:(hi = ((lo <= v : [%v: int]) [@over])) =
-  ((true 
+  (((list_len v == n && fun (x : int) -> (list_mem v x) #==> (lo <= x && x <= hi))
     : [%v: int list]) [@eqv eqv_set])
