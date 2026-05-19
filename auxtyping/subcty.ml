@@ -105,11 +105,14 @@ let sub_cty ou rctx cty1 cty2 exists_prop =
   in
   let nty = if Nt.equal_nt cty1.nty cty2.nty then cty1.nty else _die [%here] in
   let overctx = (default_v, mk_top_cty nty) :: overctx in
+  let exists_prop =
+    fresh_name_prop
+    @@ List.fold_right smart_dependent_forall overctx exists_prop
+  in
   let query =
     match (ou, cty1.eqv, cty2.eqv) with
     | Over, None, None ->
         let prop = smart_implies cty1.phi cty2.phi in
-        let prop = smart_implies exists_prop prop in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty1.nty) ])
           prop
@@ -119,7 +122,6 @@ let sub_cty ou rctx cty1 cty2 exists_prop =
             (fresh_name_prop cty1.phi)
         in
         let prop = smart_implies cty2.phi rhs in
-        let prop = smart_implies exists_prop prop in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
@@ -128,12 +130,12 @@ let sub_cty ou rctx cty1 cty2 exists_prop =
         let phi = eqv_to_phi nty cty1.phi eqv' in
         let rhs = List.fold_right smart_dependent_exists underctx phi in
         let prop = smart_implies cty2.phi rhs in
-        let prop = smart_implies exists_prop prop in
         List.fold_right smart_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
     | _ -> _die_with [%here] "unsupported eqv"
   in
+  let query = smart_implies exists_prop query in
   let () = Statistic.stat_query_formula (rctx.task_name, query) in
   let time, res =
     clock (fun () ->
