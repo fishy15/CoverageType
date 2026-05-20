@@ -71,17 +71,34 @@ let exists_rty x rty =
 
 let exists_rtys = List.fold_right exists_rty
 
+type 'a distict_values = NoValues | OneValue of 'a | ManyValues
+
+let rec unique_eqv = function
+  | [] -> NoValues
+  | None :: _ -> NoValues
+  | Some eqv :: ctys -> (
+      match unique_eqv ctys with
+      | NoValues -> OneValue eqv
+      | OneValue eqv' when eqv = eqv' -> OneValue eqv
+      | _ -> ManyValues)
+
 let n_to_one_ctys prop_f = function
   | [] -> _die [%here]
-  | { nty; phi; eqv = None } :: ctys ->
-      if
+  | { nty; phi; eqv } :: ctys ->
+      let same_ntys =
         List.for_all (function { nty = nty'; _ } -> Nt.equal_nt nty nty') ctys
-      then
-        let phis = phi :: List.map (function { phi; _ } -> phi) ctys in
-        let phis = List.map _simp_prop phis in
-        { nty; phi = prop_f phis; eqv = None }
-      else _die [%here]
-  | _ -> _die_with [%here] "eqv unimpl"
+      in
+      _assert [%here] "ntys should be same" same_ntys;
+      let eqvs = eqv :: List.map (function { eqv; _ } -> eqv) ctys in
+      let eqv =
+        match unique_eqv eqvs with
+        | NoValues -> None
+        | OneValue eqv -> Some eqv
+        | ManyValues -> _die_with [%here] "multiple eqv values"
+      in
+      let phis = phi :: List.map (function { phi; _ } -> phi) ctys in
+      let phis = List.map _simp_prop phis in
+      { nty; phi = prop_f phis; eqv }
 
 let union_ctys = n_to_one_ctys smart_or
 
