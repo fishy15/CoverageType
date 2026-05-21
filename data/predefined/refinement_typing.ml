@@ -258,7 +258,8 @@ let[@library] swap =
 let[@library] cons_eqv_set =
   fun (a : baseType) ?r:(h : 'a)
     ?r:(t = (true : [%v : 'a list]) [@eqv eqv_set] [@over]) ->
-  (hd v h && tl v t : [%v: 'a list]) [@eqv eqv_set]
+(fun (u : 'a) -> iff (list_mem v u) (h == u || list_mem t u) : [%v: 'a list]) [@eqv eqv_set]
+  (* (hd v h && tl v t : [%v: 'a list]) [@eqv eqv_set] *)
 
 let[@library] node_eqv_spine =
   fun (a : baseType) ?r:(x : 'a)
