@@ -1054,9 +1054,10 @@ let[@axiom] eqv_spine_definition =
   fun (t1 : 'a tree) (t2 : 'a tree)  ->
     iff (eqv_spine t1 t2)
       ((depth t1 == 0 && depth t2 == 0) ||
-      (fun (lch1 : 'a tree) (lch2 : 'a tree) (rch1 : 'a tree) (rch2 : 'a tree) ->
-        (lch t1 lch1 && rch t1 rch1 && lch t2 lch2 && rch t2 rch2) &&
-        (eqv_spine lch1 lch2) && (eqv_spine rch1 rch2)))
+      (depth t1 > 0 && depth t2 > 0 && 
+        (fun (lch1 : 'a tree) (lch2 : 'a tree) (rch1 : 'a tree) (rch2 : 'a tree) ->
+          (lch t1 lch1 && rch t1 rch1 && lch t2 lch2 && rch t2 rch2)#==>
+            (eqv_spine lch1 lch2 && eqv_spine rch1 rch2))))
 
 let[@axiom] eqv_spine_refl =
   fun (l : 'a tree) -> eqv_spine l l
