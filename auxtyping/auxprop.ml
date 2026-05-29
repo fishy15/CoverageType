@@ -20,6 +20,4 @@ let smart_dependent_exists (x, { nty; phi; eqv }) query =
       let phi = subst_prop_instance default_v (AVar x'#:nty) phi in
       let eqv_query = Eqv.eqv_prop eqv x#:nty x'#:nty in
       let query = smart_forall_phi (x#:nty, eqv_query) query in
-      let after = smart_exists_phi (x'#:nty, phi) query in
-      Pp.printf "smart_dependent_exists: %s\n" (layout_prop after);
-      after
+      smart_exists_phi (x'#:nty, phi) query

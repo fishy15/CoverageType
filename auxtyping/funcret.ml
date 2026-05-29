@@ -10,11 +10,16 @@ let no_exists_needed_ty rty =
   | _ -> false
 
 let exists_fresh_v_prop cty =
-  let prop, nty = (cty.phi, cty.nty) in
-  let var = Rename.fresh_var () in
-  let var = var#:nty in
+  let { phi = prop; nty; eqv } = cty in
+  let var = (Rename.different_var default_v)#:nty in
   let prop = subst_prop_instance default_v (AVar var) prop in
-  Exists { qv = var; body = prop }
+  match eqv with
+  | None -> Exists { qv = var; body = prop }
+  | Some eqv ->
+      let var' = (Rename.different_var default_v)#:nty in
+      let prop = subst_prop_instance default_v (AVar var) prop in
+      let eqv_prop = Eqv.eqv_prop eqv var var' in
+      smart_forall_phi (var, prop) @@ Exists { qv = var'; body = eqv_prop }
 
 let possible_value_fv prop fv fvrty =
   let fv = fv.x in
