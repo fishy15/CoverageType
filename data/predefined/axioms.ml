@@ -215,13 +215,8 @@ let[@axiom] tree_leaf_cnt_unique (t : int tree) (x : int) (y : int) =
 let[@axiom] tree_leaf_cnt_1 (t : int tree) =
   iff (depth t == 0) (tree_num_leaf t 1)
 
-(*] tree_node_cnt_sum (t : int tree) (l : int tree) (r : int tree) (s : int) (ls : int) (rs : int) = *)
-(*   (lch t l && rch t r && tree_num_leaf t s && tree_num_leaf l ls && tree_num_leaf r rs)#==>(s == ls + rs) *)
-
-let[@axiom] tree_node_cnt_sum2 (t : int tree) (s : int) =
-  (depth t > 0 && tree_num_leaf t s)#==>
-  (fun ((l [@ex]) : int tree) ((r [@ex]) : int tree) ((ls [@ex]) : int) ((rs [@ex]) : int) ->
-     lch t l && rch t r && tree_num_leaf l ls && tree_num_leaf r rs && s == ls + rs)
+let[@axiom] tree_node_cnt_sum (t : int tree) (l : int tree) (r : int tree) (s : int) (ls : int) (rs : int) = 
+  (lch t l && rch t r && tree_num_leaf t s && tree_num_leaf l ls && tree_num_leaf r rs)#==>(s == ls + rs)
 
 let[@axiom] tree_depth_has_child (t : int tree) =
   (depth t > 0)#==>(fun ((l [@ex]) : int tree) ((r [@ex]) : int tree) -> lch t l && rch t r)
