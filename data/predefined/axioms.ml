@@ -239,10 +239,6 @@ let[@axiom] tree_unique_lch (t : int tree) (l1 : int tree) (l2 : int tree) =
 let[@axiom] tree_unique_rch (t : int tree) (r1 : int tree) (r2 : int tree) =
   (lch t r1 && rch t r2)#==>(r1 == r2)
   
-let[@axiom] tree_ch_depth_minus_1 (l : int tree) (l1 : int tree) (n : int)
-    (n1 : int) =
-  (lch l l1 || rch l l1)#==>(depth l1 == depth l - 1)
-
 (** tree_mem *)
 
 let[@axiom] tree_root_mem (l : int tree) (x : int) =
