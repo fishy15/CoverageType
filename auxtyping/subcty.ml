@@ -64,9 +64,9 @@ let sub_cty ou rctx cty1 cty2 exists_prop =
     simplify_sub_typectx rctx.rty_ctx (cty1, cty2) exists_prop
   in
   let () =
-    Printf.printf "ctx_list: %s\n" (List.split_by_comma _get_x ctx_list)
+    _log_auxtyping @@ fun _ ->
+    Printf.printf "exists_prop: %s\n" (layout_prop exists_prop)
   in
-  Printf.printf "exists_prop: %s\n" (layout_prop exists_prop);
   let overctx, underctx = build_wf_ctx ctx_list in
   let () =
     _log_auxtyping @@ fun _ ->

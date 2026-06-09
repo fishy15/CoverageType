@@ -76,11 +76,7 @@ let construct_call_ret_exists rctx localctx retty =
   else
     (* prefer local context over global context *)
     let rty_ctx = Typectx.concat_update rctx.rty_ctx localctx intersect_rty in
-    Pp.printf "finding for retty: %s\n" (layout_rty retty);
-    Pp.printf "rty ctx: %s\n" (Typectx.layout_ctx layout_rty rty_ctx);
     let fvs = relevant_fvs_in_ctx rty_ctx retty in
-    Pp.printf "relevant fvs: %s\n"
-      (String.concat ", " (List.map (fun fv -> fv.x) fvs));
     let fvrtys =
       List.map
         (fun fv ->
@@ -89,12 +85,6 @@ let construct_call_ret_exists rctx localctx retty =
           | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
         fvs
     in
-    Pp.printf "retty: %s\n" (layout_rty retty);
-    Pp.printf "fvs: ";
-    List.iter2
-      (fun fv fvrty -> Printf.printf "%s <%s> " fv.x (layout_rty fvrty))
-      fvs fvrtys;
-    print_newline ();
     let retcty =
       match retty with
       | RtyBase { ou = Under; cty } -> cty
