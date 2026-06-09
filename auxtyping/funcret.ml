@@ -52,17 +52,18 @@ let relevant_fvs_in_ctx rty_ctx rty =
   in
   aux None rty [] |> List.map (fun (x, rty) -> x#:rty)
 
-let constrain_by_fvs fvs fvrtys prop =
+let constrain_by_fvs fvs prop =
   let fv_prop =
     List.fold_left
-      (fun acc fvrty ->
+      (fun acc fv ->
         let phi =
-          match fvrty with
-          | RtyBase { ou = _; cty } -> cty.phi
+          match fv with
+          | { ty = RtyBase { ou = _; cty }; _ } -> cty.phi
           | _ -> _die_with [%here] "unimp"
         in
+        let phi = subst_prop_instance default_v (AVar fv#=>erase_rty) phi in
         smart_and [ acc; phi ])
-      Prop.mk_true fvrtys
+      Prop.mk_true fvs
   in
   let prop = smart_implies fv_prop prop in
   List.fold_left
@@ -77,18 +78,10 @@ let construct_call_ret_exists rctx localctx retty =
     (* prefer local context over global context *)
     let rty_ctx = Typectx.concat_update rctx.rty_ctx localctx intersect_rty in
     let fvs = relevant_fvs_in_ctx rty_ctx retty in
-    let fvrtys =
-      List.map
-        (fun fv ->
-          match Typectx.get_opt rty_ctx fv.x with
-          | Some rty -> rty
-          | None -> _die_with [%here] (spf "cannot find %s in rty ctx\n" fv.x))
-        fvs
-    in
     let retcty =
       match retty with
       | RtyBase { ou = Under; cty } -> cty
       | _ -> _die_with [%here] "unimp"
     in
     let prop = exists_fresh_v_prop retcty in
-    fresh_name_prop @@ constrain_by_fvs fvs fvrtys prop
+    fresh_name_prop @@ constrain_by_fvs fvs prop

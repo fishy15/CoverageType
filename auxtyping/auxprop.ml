@@ -21,3 +21,13 @@ let smart_dependent_exists (x, { nty; phi; eqv }) query =
       let eqv_query = Eqv.eqv_prop eqv x#:nty x'#:nty in
       let query = smart_forall_phi (x#:nty, eqv_query) query in
       smart_exists_phi (x'#:nty, phi) query
+
+let smart_fresh_dependent_forall (x, ty) query =
+  let x' = Rename.unique_var x in
+  let query = subst_prop_instance x (AVar x'#:(erase_cty ty)) query in
+  smart_dependent_forall (x', ty) query
+
+let smart_fresh_dependent_exists (x, ty) query =
+  let x' = Rename.unique_var x in
+  let query = subst_prop_instance x (AVar x'#:(erase_cty ty)) query in
+  smart_dependent_exists (x, ty) query

@@ -110,26 +110,26 @@ let sub_cty ou rctx cty1 cty2 exists_prop =
     | Over, None, None ->
         let prop = smart_implies cty1.phi cty2.phi in
         let prop = smart_implies exists_prop prop in
-        List.fold_right smart_dependent_forall
+        List.fold_right smart_fresh_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty1.nty) ])
           prop
     | Under, None, None ->
         let rhs =
-          List.fold_right smart_dependent_exists underctx
+          List.fold_right smart_fresh_dependent_exists underctx
             (fresh_name_prop cty1.phi)
         in
         let prop = smart_implies cty2.phi rhs in
         let prop = smart_implies exists_prop prop in
-        List.fold_right smart_dependent_forall
+        List.fold_right smart_fresh_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
     | Under, None, Some eqv ->
         let underctx = underctx in
         let phi = eqv_to_phi nty cty1.phi eqv in
-        let rhs = List.fold_right smart_dependent_exists underctx phi in
+        let rhs = List.fold_right smart_fresh_dependent_exists underctx phi in
         let prop = smart_implies cty2.phi rhs in
         let prop = smart_implies exists_prop prop in
-        List.fold_right smart_dependent_forall
+        List.fold_right smart_fresh_dependent_forall
           (overctx @ [ (default_v, mk_top_cty cty2.nty) ])
           prop
     | _ -> _die_with [%here] "unsupported eqv"
