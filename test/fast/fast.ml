@@ -126,3 +126,56 @@ let%expect_test "simple/ReturnError" =
     passing:
     failing: sized_list_gen
   |}]
+
+let%expect_test "simple/DivZero" =
+  run_test "data/simple/DivZero.ml";
+  [%expect
+    {|
+    passing: 
+    failing: bad_div, safe_div, safe2_div, bad2_div, bad3_div
+  |}]
+
+let%expect_test "simple/listconcat" =
+  run_test "data/simple/listconcat.ml";
+  [%expect {|
+    passing: f
+    failing:
+  |}]
+
+let%expect_test "simple/simpleadd" =
+  run_test "data/simple/simpleadd.ml";
+  [%expect {|
+    passing: f
+    failing:
+  |}]
+
+(* Equivalency tests *)
+
+let%expect_test "equivalence/SimpleList" =
+  run_test "data/equivalence/SimpleList.ml";
+  [%expect {|
+    passing: list_gen, list_gen_nondet
+    failing:
+  |}]
+
+let%expect_test "equivalence/duplicate_list" =
+  run_test "data/equivalence/duplicate_list.ml";
+  [%expect
+    {|
+    passing: duplicate_list_gen, duplicate_list_gen_nondet
+    failing:
+  |}]
+
+let%expect_test "equivalence/OrderedList" =
+  run_test "data/equivalence/OrderedList.ml";
+  [%expect {|
+    passing: list_gen
+    failing:
+  |}]
+
+let%expect_test "equivalence/TreeSpine" =
+  run_test "data/equivalence/TreeSpine.ml";
+  [%expect {|
+    passing: gen_spine, gen_line
+    failing:
+  |}]

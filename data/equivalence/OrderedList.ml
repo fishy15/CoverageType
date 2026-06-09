@@ -1,7 +1,4 @@
-let choose (xs : int list) (ys : int list) : int list =
-  if bool_gen () then xs else ys
-
-let[@assert] choose ?r:(xs : int list) ?r:(ys : int list) =
+let[@library] choose ?r:(xs : int list) ?r:(ys : int list) =
   (v == xs || v == ys : [%v: int list]) 
 
 let rec list_gen (lo : int) (hi : int) : int list =
