@@ -96,6 +96,34 @@ end
 
 open Rctx
 
+type localctx = Nt.t rty Typectx.ctx
+
+module InferResult = struct
+  type 'a t = { term : 'a; exists_prop : Nt.t prop; localctx : localctx }
+
+  let default term =
+    { term; exists_prop = Prop.mk_true; localctx = Typectx.emp }
+
+  let map f v = { v with term = f v.term }
+
+  let combine { term = term1; exists_prop = exists_prop1; localctx = localctx1 }
+      { term = term2; exists_prop = exists_prop2; localctx = localctx2 } =
+    let term = (term1, term2) in
+    let exists_prop = smart_and [ exists_prop1; exists_prop2 ] in
+    let localctx = Typectx.concat_update localctx1 localctx2 intersect_rty in
+    { term; exists_prop; localctx }
+
+  let result_list_to_list_result vs =
+    let acc =
+      { term = []; exists_prop = Prop.mk_true; localctx = Typectx.emp }
+    in
+    List.fold_right
+      (fun v acc ->
+        let { term = h, t; exists_prop; localctx } = combine v acc in
+        { term = h :: t; exists_prop; localctx })
+      vs acc
+end
+
 let _warinning_subtyping_error loc (rty1, rty2) =
   _log @@ fun _ ->
   Pp.printf "@{<bold>Type Error at %s:@} %s <: %s\n" (pos_to_string loc)
@@ -136,7 +164,9 @@ let pprint_typing_infer_value_after rctx (e, res) =
   _log
   @@ pprint_typing_infer (pprint rctx)
        ( layout_typed_value e,
-         match res with Some res -> layout_rty res.ty | None -> "None" )
+         match res with
+         | Some { InferResult.term = res; _ } -> layout_rty res.ty
+         | None -> "None" )
 
 let pprint_typing_subtyping rctx (rty1, rty2) =
   _log @@ pprint_subtyping (pprint rctx) (rty1, rty2)

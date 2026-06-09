@@ -4,42 +4,11 @@ open Sugar
 open Auxtyping
 open Common
 open HandlePred
+module InferResult = Common.InferResult
 
 type value_infer_mode = TopParam | PolyPredParam
 
 let value_infer_mode = PolyPredParam
-
-type localctx = Nt.t rty Typectx.ctx
-
-module InferResult = struct
-  type 'a t = { term : 'a; exists_prop : Nt.t prop; localctx : localctx }
-
-  let mk term exists_prop localctx = { term; exists_prop; localctx }
-
-  let default term =
-    { term; exists_prop = Prop.mk_true; localctx = Typectx.emp }
-
-  let map f v = { v with term = f v.term }
-
-  let combine { term = term1; exists_prop = exists_prop1; localctx = localctx1 }
-      { term = term2; exists_prop = exists_prop2; localctx = localctx2 } =
-    let term = (term1, term2) in
-    let exists_prop = smart_and [ exists_prop1; exists_prop2 ] in
-    let localctx = Typectx.concat_update localctx1 localctx2 intersect_rty in
-    { term; exists_prop; localctx }
-
-  let result_list_to_list_result vs =
-    let acc =
-      { term = []; exists_prop = Prop.mk_true; localctx = Typectx.emp }
-    in
-    List.fold_right
-      (fun v acc ->
-        let { term = h, t; exists_prop; localctx } = combine v acc in
-        { term = h :: t; exists_prop; localctx })
-      vs acc
-
-  let replace_term (newterm : 'a) (old : 'b t) = { old with term = newterm }
-end
 
 let type_check_group (bctx : built_in_ctx) =
   let _find_in_ctx loc (rctx : rctx) (id : (Nt.t, string) typed) =
@@ -68,23 +37,34 @@ let type_check_group (bctx : built_in_ctx) =
       | VVar id ->
           let () = if String.equal id.x "None" then _die [%here] in
           let rty = _id_type_infer [%here] rctx id in
-          let res = Some (VVar id.x#:rty)#:rty in
-          if Myconfig.get_bool_option "show_type_infer_variable_judgement" then
-            pprint_typing_infer_value_after rctx (v, res);
           let localctx =
             Typectx.get_opt lctx id.x |> Option.value ~default:Typectx.emp
           in
-          Option.map (fun res -> InferResult.mk res Prop.mk_true localctx) res
+          let res =
+            Some
+              {
+                InferResult.term = (VVar id.x#:rty)#:rty;
+                exists_prop = Prop.mk_true;
+                localctx;
+              }
+          in
+          if Myconfig.get_bool_option "show_type_infer_variable_judgement" then
+            pprint_typing_infer_value_after rctx (v, res);
+          res
       | VConst U ->
-          let res = Some (VConst U)#:(mk_top_underrty Nt.unit_ty) in
+          let res =
+            Some (InferResult.default (VConst U)#:(mk_top_underrty Nt.unit_ty))
+          in
           if Myconfig.get_bool_option "show_type_infer_constant_judgement" then
             pprint_typing_infer_value_after rctx (v, res);
-          Option.map InferResult.default res
+          res
       | VConst c ->
-          let res = Some (VConst c)#:(mk_eq_c_underrty c) in
+          let res =
+            Some (InferResult.default (VConst c)#:(mk_eq_c_underrty c))
+          in
           if Myconfig.get_bool_option "show_type_infer_constant_judgement" then
             pprint_typing_infer_value_after rctx (v, res);
-          Option.map InferResult.default res
+          res
       | VTuple vs ->
           let* vs =
             opt_list_to_list_opt @@ List.map (value_type_infer rctx lctx) vs
@@ -110,9 +90,9 @@ let type_check_group (bctx : built_in_ctx) =
                 cty = { nty = v.ty; phi = smart_and phis; eqv = None };
               }
           in
-          let res = Some (VTuple vs.term)#:rty in
+          let res = Some { vs with term = (VTuple vs.term)#:rty } in
           pprint_typing_infer_value_after rctx (v, res);
-          Option.map (fun res -> InferResult.replace_term res vs) res
+          res
       | VLam { lamarg; body } ->
           let nty = lamarg.ty in
           let res =
@@ -163,7 +143,7 @@ let type_check_group (bctx : built_in_ctx) =
           (* TODO: there is some bad cache i think, can be replaced with the version below *)
           let _ =
             match res with
-            | Some r -> pprint_typing_infer_value_after rctx (v, Some r.term)
+            | Some r -> pprint_typing_infer_value_after rctx (v, Some r)
             | None -> pprint_typing_infer_value_after rctx (v, None)
           in
           (* pprint_typing_infer_value_after rctx *)
@@ -375,9 +355,12 @@ let type_check_group (bctx : built_in_ctx) =
                   Typectx.concat_update rhs.localctx body.localctx intersect_rty
                 in
                 Some
-                  (InferResult.mk
-                     (CLetE { rhs = rhs.term; lhs; body = body.term })#:rty
-                     exists_prop localctx)
+                  {
+                    InferResult.term =
+                      (CLetE { rhs = rhs.term; lhs; body = body.term })#:rty;
+                    exists_prop;
+                    localctx;
+                  }
           (* (\* Lambda function to let binding *\) *)
           (* | CApp { appf = { x = VLam { lamarg; body }; _ }; apparg } -> *)
           (*     let apparg = value_type_infer rctx apparg in *)
@@ -453,9 +436,12 @@ let type_check_group (bctx : built_in_ctx) =
               in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               Some
-                (InferResult.mk
-                   (CApp { appf = appf.term; apparg = apparg'.term })#:retty
-                   exists_prop localctx)
+                {
+                  InferResult.term =
+                    (CApp { appf = appf.term; apparg = apparg'.term })#:retty;
+                  exists_prop;
+                  localctx;
+                }
           | CAppOp { op; appopargs } ->
               let op =
                 op.x#:(_find_in_ctx [%here] rctx op#->op_name_for_typectx)
@@ -502,9 +488,12 @@ let type_check_group (bctx : built_in_ctx) =
               let localctx = appopargs.localctx in
               (* let () = Printf.printf "retty : %s\n" (layout_rty retty) in *)
               Some
-                (InferResult.mk
-                   (CAppOp { op; appopargs = List.map snd appopargs.term })#:retty
-                   exists_prop localctx)
+                {
+                  InferResult.term =
+                    (CAppOp { op; appopargs = List.map snd appopargs.term })#:retty;
+                  exists_prop;
+                  localctx;
+                }
           | CMatch { matched; match_cases } ->
               (* NOTE: we drop unreachable cases *)
               let match_cases =
@@ -529,11 +518,16 @@ let type_check_group (bctx : built_in_ctx) =
                   intersect_rty
               in
               Some
-                (InferResult.mk
-                   (CMatch
-                      { matched = matched.term; match_cases = match_cases.term })
-                   #:unioned_ty
-                   exists_prop localctx)
+                {
+                  InferResult.term =
+                    (CMatch
+                       {
+                         matched = matched.term;
+                         match_cases = match_cases.term;
+                       })#:unioned_ty;
+                  exists_prop;
+                  localctx;
+                }
           | CLetDeTuple { turhs; tulhs; body } ->
               let* turhs' = value_type_infer rctx lctx turhs in
               let tmp = (Rename.fresh_var ())#:turhs.ty in
@@ -550,10 +544,12 @@ let type_check_group (bctx : built_in_ctx) =
               let* body = term_type_infer rctx' lctx body in
               let rty = Rctx.diff_exists_rty [%here] rctx' rctx body.term.ty in
               Some
-                (InferResult.replace_term
-                   (CLetDeTuple { turhs = turhs'.term; tulhs; body = body.term })
-                   #:rty
-                   body)
+                {
+                  body with
+                  term =
+                    (CLetDeTuple
+                       { turhs = turhs'.term; tulhs; body = body.term })#:rty;
+                }
           (* | CLetE { rhs; lhs; body } -> *)
           (*     let* rhs = term_type_infer rctx rhs in *)
           (*     let lhs = lhs.x#:rhs.ty in *)
@@ -644,14 +640,16 @@ let type_check_group (bctx : built_in_ctx) =
           pprint_typing_infer_match_case rctx constructor (exp, exp'.term.ty)
         in
         Some
-          (InferResult.replace_term
-             (CMatchcase
+          {
+            exp' with
+            term =
+              CMatchcase
                 {
                   constructor = constructor.x#:constructor_rty;
                   args;
                   exp = exp'.term;
-                })
-             exp')
+                };
+          }
   in
   (value_type_check, term_type_check)
 
