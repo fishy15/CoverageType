@@ -3,6 +3,8 @@ include Normalization
 open Language
 open Zutils
 
+let _log = Myconfig._log "preprocess"
+
 let parse file =
   ocaml_structure_to_items
   @@ OcamlParser.Oparse.parse_imp_from_file ~sourcefile:file
@@ -46,7 +48,7 @@ let load_alias () =
   let alias, _, _ = load_ctxs () in
   alias
 
-let preproress source_files =
+let preprocess source_files =
   let items = multi_parse source_files in
   let items' = Type_alias.item_inline (load_alias ()) items in
   let alias = Type_alias.item_mk_type_alias_ctx items' in
@@ -56,7 +58,9 @@ let preproress source_files =
   let _, code = struct_check (load_basic_ctx ()) items' in
   let code = Type_alias.item_inline alias code in
   let code = Type_alias.item_inline (load_alias ()) code in
-  let () = Pp.printf "@{<bold>result:@}\n%s\n" (layout_structure code) in
+  let () =
+    _log (fun _ -> Pp.printf "@{<bold>result:@}\n%s\n" (layout_structure code))
+  in
   (* let () = *)
   (*   Pp.printf "@{<bold>alias:@}\n%s\n" (Type_alias.layout_alias (load_alias ())) *)
   (* in *)

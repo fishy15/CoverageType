@@ -10,12 +10,12 @@ let regular_file =
       | `Unknown -> failwith "Could not determine if this was a regular file")
 
 let print_source_code source_file () =
-  let code = Preprocess.preproress [ source_file ] in
+  let code = Preprocess.preprocess [ source_file ] in
   let _ = Pp.printf "%s\n" (layout_structure code) in
   ()
 
 let subtype_check source_file () =
-  let code = Preprocess.preproress [ source_file ] in
+  let code = Preprocess.preprocess [ source_file ] in
   let _, rty1 = get_rty_by_name code "rty1" in
   let _, rty2 = get_rty_by_name code "rty2" in
   let ctx = Typectx.emp in
@@ -25,6 +25,7 @@ let subtype_check source_file () =
       (rty1, rty2) ()
   in
   let _ = Preprocess.load_bctx () in
+  let () = Statistic.create_subtyping_stat () in
   let res =
     Auxtyping.sub_rty
       (Typing.Rctx.emp "subtyping" [] [])
@@ -33,7 +34,7 @@ let subtype_check source_file () =
   Pp.printf "@{<bold>result: %b:@}\n" res
 
 let type_check source_file () =
-  let code = Preprocess.preproress [ source_file ] in
+  let code = Preprocess.preprocess [ source_file ] in
   let () = Pp.printf "@{<bold>result:@} %s\n" (layout_structure code) in
   (* let () = _die [%here] in *)
   let _ = Typing.struc_check (Preprocess.load_bctx ()) code in

@@ -10,6 +10,11 @@ type 'a task =
   | ValidCheck of string * 'a prop
   | SatCheck of string * 'a prop
 
+let task_name = function
+  | TypeCheck (name, _) -> name
+  | ValidCheck (name, _) -> name
+  | SatCheck (name, _) -> name
+
 let _type_check_info name rty =
   _log @@ fun _ ->
   Pp.printf "@{<bold>Type Check %s:@}\n" name;
@@ -84,7 +89,10 @@ let item_check bctx inv_m imp_m (name, rty) =
       (spf "The source code of given refinement type '%s' is missing." name)
       imp_m name
   in
-  let () = Pp.printf "@{<bold>imp_m(%s)@}\n%s\n" name (layout_typed_term imp) in
+  let () =
+    _log @@ fun _ ->
+    Pp.printf "@{<bold>imp_m(%s)@}\n%s\n" name (layout_typed_term imp)
+  in
   let () = Statistic.create_stat name imp in
   let () = Statistic.stat_update_rty (name, counter_rty_qt_qpred rty) in
   let invs = match StrMap.find_opt inv_m name with None -> [] | Some l -> l in
@@ -130,22 +138,23 @@ let struc_check bctx items =
   let bctx, imp_m = mk_imp_m bctx items in
   let inv_m = mk_invs items in
   let tasks = mk_tasks items in
-  let _, res =
+  let _, passed, failed =
     List.fold_left
-      (fun (bctx, failed) task ->
+      (fun (bctx, passed, failed) task ->
+        let name = task_name task in
         match check_task bctx inv_m imp_m task with
-        | Suc bctx -> (bctx, failed)
-        | Fai -> (bctx, failed @ [ task ]))
-      (bctx, []) tasks
+        | Suc bctx -> (bctx, passed @ [ name ], failed)
+        | Fai -> (bctx, passed, failed @ [ task ]))
+      (bctx, [], []) tasks
   in
   let () =
     _log @@ fun _ ->
     Pp.printf "@{<bold>Summary (total %i tasks):@}\n" (List.length tasks)
   in
   let () =
-    match res with
+    match failed with
     | [] ->
         _log @@ fun _ -> Pp.printf "@{<bold>@{<yellow>All tasks succeeded@}@}\n"
-    | _ -> _log @@ fun _ -> List.iter _task_fail res
+    | _ -> _log @@ fun _ -> List.iter _task_fail failed
   in
-  Some bctx
+  (Some bctx, passed, failed)

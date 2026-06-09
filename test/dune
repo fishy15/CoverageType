@@ -1,2 +1,2 @@
-(test
- (name test_CoverageType))
+(library
+  (name test_CoverageType))

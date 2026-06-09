@@ -4,11 +4,13 @@ open Zutils
 open Zdatatype
 
 let if_opt = false
+let _log = Myconfig._log_typing
 
 let _simp_prop p =
   if if_opt then
     let res = SimplProp.eval_arithmetic p in
     let () =
+      _log @@ fun _ ->
       Pp.printf "@{<bold>SIMP@} %s =====> %s\n" (layout_prop p)
         (layout_prop res)
     in
@@ -20,16 +22,24 @@ let exists_cty (x : string) ({ nty; phi; eqv } : 't cty) (cty : 't cty) : 't cty
   let phi = match eqv with None -> phi | Some eqv -> eqv_to_phi nty phi eqv in
   if Nt.equal_nt Nt.unit_ty nty then { cty with phi = smart_add_to phi cty.phi }
   else
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let () =
+      _log @@ fun _ -> Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi)
+    in
     let phi = subst_prop_instance default_v (AVar x#:nty) phi in
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let () =
+      _log @@ fun _ -> Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi)
+    in
     let phi, cty_phi = map2 _simp_prop (phi, cty.phi) in
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let () =
+      _log @@ fun _ -> Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi)
+    in
     let phi =
       if if_opt then smart_exists [ x#:nty ] (smart_add_to phi cty_phi)
       else Exists { qv = x#:nty; body = smart_add_to phi cty_phi }
     in
-    let () = Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi) in
+    let () =
+      _log @@ fun _ -> Pp.printf "@{<bold>exists_cty@} %s\n" (layout_prop phi)
+    in
     let phi = if if_opt then SimplProp.simpl_query_by_eq phi else phi in
     { cty with phi }
 
@@ -116,6 +126,7 @@ let rec union_rtys = function
           RtyBase { ou = Under; cty = union_ctys ctys }
       | RtyArr { argrty; _ } when Nt.equal_nt (erase_rty argrty) Nt.unit_ty ->
           let () =
+            _log @@ fun _ ->
             List.iter (fun rty -> Printf.printf "%s\n" (layout_rty rty)) rtys
           in
           let rtys = List.map (ret_ty [%here]) rtys in

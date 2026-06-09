@@ -54,7 +54,7 @@ let stat_query_formula (name, prop) =
 let stat_total_time (name, total_time) =
   update_stat name (fun stat -> { stat with total_time })
 
-let calcutale_stat stat =
+let calculate_stat stat =
   (* let num_query = List.length stat.query_times in *)
   (* let query_time = List.fold_left ( +. ) 0.0 stat.query_times in *)
   let avg_time =
@@ -66,7 +66,7 @@ let calcutale_stat stat =
 
 let store_stat filename =
   let j =
-    stat_list_to_yojson @@ List.map calcutale_stat @@ List.of_seq
+    stat_list_to_yojson @@ List.map calculate_stat @@ List.of_seq
     @@ Hashtbl.to_seq_values _stat_tab
   in
   Yojson.Safe.to_file filename j
@@ -97,3 +97,30 @@ let create_stat function_name (imp : (Nt.t, Nt.t term) typed) =
   match Hashtbl.find_opt _stat_tab function_name with
   | None -> Hashtbl.add _stat_tab function_name stat
   | Some _ -> _die [%here]
+
+let create_subtyping_stat () =
+  let function_name = "subtyping" in
+  let mp = 0 in
+  let stat =
+    {
+      function_name;
+      branchs = 0;
+      if_rec = false;
+      lvar = 0;
+      num_qt = 0;
+      num_qpred = 0;
+      method_prdicates = [];
+      mp;
+      query_times = [];
+      num_query = 0;
+      max_forall = 0;
+      max_exists = 0;
+      total_time = 0.0;
+      avg_time = 0.0;
+    }
+  in
+  match Hashtbl.find_opt _stat_tab function_name with
+  | None -> Hashtbl.add _stat_tab function_name stat
+  | Some _ -> _die [%here]
+
+let clear () = Hashtbl.clear _stat_tab

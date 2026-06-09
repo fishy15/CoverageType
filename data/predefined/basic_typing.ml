@@ -121,6 +121,7 @@ val bst : 'a tree -> bool
 val heap : 'a tree -> bool
 val complete : 'a tree -> bool
 val tree_num_leaf : 'a tree -> int -> bool
+val tree_num_node : 'a tree -> int
 
 (** Stream *)
 

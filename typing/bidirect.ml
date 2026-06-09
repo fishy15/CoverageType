@@ -181,7 +181,10 @@ let type_check_group (bctx : built_in_ctx) =
               _die_with [%here]
                 (spf "inductive invaraint of %s is missing" fixname.x)
           | Some rty ->
-              let () = Pp.printf "@{<bold>inv:@} %s\n" (layout_rty rty) in
+              let () =
+                _log @@ fun _ ->
+                Pp.printf "@{<bold>inv:@} %s\n" (layout_rty rty)
+              in
               Option.map InferResult.default (value_type_check rctx lctx v rty))
     in
     res
@@ -299,9 +302,10 @@ let type_check_group (bctx : built_in_ctx) =
     let () =
       let _nt1 = erase_rty argrty in
       let _nt2 = erase_rty apparg.ty in
-      if not (Nt.equal_nt _nt1 _nt2) then (
-        Printf.printf "%s != %s\n" (Nt.layout _nt1) (Nt.layout _nt2);
-        _assert [%here] "application basic type check" false)
+      _assert [%here]
+        (spf "application basic type check failed: %s != %s\n" (Nt.layout _nt1)
+           (Nt.layout _nt2))
+        (Nt.equal_nt _nt1 _nt2)
     in
     match argrty with
     | RtyArr _ ->
@@ -310,10 +314,10 @@ let type_check_group (bctx : built_in_ctx) =
           _warinning_typing_error [%here]
             (layout_typed_value @@ (apparg#=>erase_rty), argrty);
           None)
-        else if is_free_rty arg retty then (
-          Printf.printf "%s\n" (layout_rty retty);
+        else if is_free_rty arg retty then
           _die_with [%here]
-            (spf "arrow typed variable cannot be refered (%s)" arg))
+            (spf "arrow typed variable cannot be refered (arg: %s) (retty: %s)"
+               arg (layout_rty retty))
         else Some retty
     | _ -> _die [%here]
   and term_type_infer (rctx : rctx) (lctx : localctx Typectx.ctx)
@@ -643,9 +647,7 @@ let type_check_group (bctx : built_in_ctx) =
               in
               RtyBase
                 { ou = Under; cty = { nty = Nt.unit_ty; phi; eqv = None } }
-          | _ ->
-              Printf.printf "retty: %s\n" (layout_rty retty);
-              _die [%here]
+          | _ -> _die_with [%here] (spf "retty %s" (layout_rty retty))
         in
         let rctx' =
           Rctx.add_vars rctx (args @ [ (Rename.fresh_var ())#:retty ])
