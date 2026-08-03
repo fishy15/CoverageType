@@ -3,12 +3,17 @@
   (flags
    (:standard -w -32 -w -35 -w -27 -w -33 -w -26))))
 
-(executable
- (name main)
- (modules main)
+(library
+ (name checks)
+ (modules checks)
  (libraries core core_unix.command_unix
             language
             preprocess
             typing)
- (preprocess
-  (pps ppx_jane)))
+ (preprocess (pps ppx_jane)))
+
+(executable
+  (name main)
+  (modules main)
+  (libraries checks)
+  (preprocess (pps ppx_jane)))

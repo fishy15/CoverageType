@@ -1,6 +1,7 @@
 open Core
 open Language
 open Zutils
+open Checks
 
 let regular_file =
   Command.Arg_type.create (fun filename ->
@@ -15,20 +16,7 @@ let print_source_code source_file () =
   ()
 
 let subtype_check source_file () =
-  let code = Preprocess.preprocess [ source_file ] in
-  let _, rty1 = get_rty_by_name code "rty1" in
-  let _, rty2 = get_rty_by_name code "rty2" in
-  let ctx = Typectx.emp in
-  let _ =
-    pprint_subtyping
-      (fun () -> Typectx.pprint_ctx layout_rty Typectx.emp)
-      (rty1, rty2) ()
-  in
-  let _ = Preprocess.load_bctx () in
-  let () = Statistic.create_subtyping_stat () in
-  let res =
-    Auxtyping.sub_rty (Typing.Rctx.emp "subtyping" [] []) (rty1, rty2)
-  in
+  let res = run_subtype_check source_file in
   Pp.printf "@{<bold>result: %b:@}\n" res
 
 let type_check source_file () =
