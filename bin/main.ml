@@ -38,6 +38,29 @@ let type_check source_file () =
   let _ = Typing.struc_check (Preprocess.load_bctx ()) code in
   ()
 
+let run_nonemptiness_check source_file =
+  let code = Preprocess.preprocess [ source_file ] in
+  let _, rty = get_rty_by_name code "rty" in
+  let rec base_rty_and_rctx rty rctx =
+    match rty with
+    | RtyBase _ -> (rty, rctx)
+    | RtyArr { arg; argrty; retty } ->
+        let rctx = Typing.Rctx.add_var rctx arg#:argrty in
+        base_rty_and_rctx retty rctx
+    | _ ->
+        _die_with [%here]
+          (spf "type should be base or arrow only, but got %s\n"
+             (layout_rty rty))
+  in
+  let rty, rctx = base_rty_and_rctx rty (Typing.Rctx.emp "nonempty" [] []) in
+  let _ = Preprocess.load_bctx () in
+  let () = Statistic.create_ignored_stat "nonempty" in
+  Auxtyping.non_emptiness_rty rctx rty
+
+let nonemptiness_check source_file () =
+  let res = run_nonemptiness_check source_file in
+  Pp.printf "@{<bold>result: %b:@}\n" res
+
 let one_param_file message f =
   let cmd =
     Command.basic ~summary:message
@@ -59,6 +82,7 @@ let commands =
       one_param_file "print-source-code" print_source_code;
       one_param_file "subtype-check" subtype_check;
       one_param_file "type-check" type_check;
+      one_param_file "nonemptiness-check" nonemptiness_check;
     ]
 
 let () = Command_unix.run commands
