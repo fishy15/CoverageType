@@ -174,28 +174,22 @@ let non_emptiness_cty rctx cty =
         "left-hand-side type should be closed under over + under ctx"
         (is_close_cty (List.map fst (overctx @ underctx)) cty)
     in
-    let overctx = (default_v, mk_top_cty cty.nty) :: overctx in
     let query =
-      List.fold_right smart_dependent_exists (overctx @ underctx) cty.phi
+      List.fold_right smart_dependent_exists underctx cty.phi
+      |> List.fold_right smart_dependent_forall overctx
     in
     let () = Statistic.stat_query_formula (rctx.task_name, query) in
     let time, res =
       clock (fun () ->
           let () =
             _log_auxtyping @@ fun _ ->
-            Printf.printf "check sat: %s\n" (layout_prop_ query)
+            Printf.printf "check valid: %s\n" (layout_prop_ query)
           in
           let () =
             _log_auxtyping @@ fun _ ->
             Printf.printf "let[@axiom] tmp = %s\n" (layout_prop__raw query)
           in
-          Prover.check_sat (Some rctx.task_name, query))
+          Prover.check_valid (Some rctx.task_name, query))
     in
     let () = Statistic.stat_query_time (rctx.task_name, time) in
-    let res =
-      match res with SmtUnsat -> false | SmtSat _ -> true | Timeout -> true
-      (* NOTE: we cannot decide if this control flow is unreachable, thus continue *)
-    in
-    (* let () = if List.length underctx > 1 then _die [%here] in *)
-    (* let () = if not res then _die [%here] in *)
     res
