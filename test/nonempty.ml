@@ -1,17 +1,18 @@
 open Checks
 
-let run_nonempty_test source_file =
+let run_nonempty_test source_file ~expected =
   Statistic.clear ();
   let root = Sys.getenv "DUNE_SOURCEROOT" in
   Sys.chdir root;
   Myconfig.meta_config_path := "test/meta-config.json";
   let source_file = Filename.concat root source_file in
-  run_nonemptiness_check source_file
+  expected == run_nonemptiness_check source_file
 
-let%test "[v: int | true]" = run_nonempty_test "data/nonempty/v_true.ml"
+let%test "[v: int | true]" =
+  run_nonempty_test "data/nonempty/v_true.ml" ~expected:true
 
 let%test "[v: int | false]" =
-  not @@ run_nonempty_test "data/nonempty/v_false.ml"
+  run_nonempty_test "data/nonempty/v_false.ml" ~expected:false
 
 let%test "[v: bool | v == (x > 0)]" =
-  run_nonempty_test "data/nonempty/is_geq_zero.ml"
+  run_nonempty_test "data/nonempty/is_geq_zero.ml" ~expected:true
