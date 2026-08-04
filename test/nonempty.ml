@@ -16,3 +16,6 @@ let%test "[v: int | false]" =
 
 let%test "[v: bool | v == (x > 0)]" =
   run_nonempty_test "data/nonempty/is_geq_zero.ml" ~expected:true
+
+let%test "[v: int | v == (dep - 1)]" =
+  run_nonempty_test "data/nonempty/dep_decrease.ml" ~expected:true
