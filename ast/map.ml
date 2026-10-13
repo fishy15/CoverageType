@@ -150,13 +150,18 @@ let rec map_rty (f : 't -> 's) (rty_e : 't rty) =
 and typed_map_rty (f : 't -> 's) (rty_e : ('t, 't rty) typed) =
   rty_e#=>f#->(map_rty f)
 
+let map_axiom (f : 't -> 's) (axiom_e : 't axiom) =
+  match axiom_e with
+  | Plain prop -> Plain (map_prop f prop)
+  | Gated prop -> Gated (map_prop f prop)
+
 let rec map_item (f : 't -> 's) (item_e : 't item) =
   match item_e with
   | MTyDecl { type_name; type_params; type_decl } ->
       MTyDecl { type_name; type_params; type_decl }
   | MValDecl _t_stringtyped0 -> MValDecl _t_stringtyped0#=>f
   | MMethodPred _t_stringtyped0 -> MMethodPred _t_stringtyped0#=>f
-  | MAxiom { name; prop } -> MAxiom { name; prop = map_prop f prop }
+  | MAxiom { name; axiom } -> MAxiom { name; axiom = map_axiom f axiom }
   | MFuncImpRaw { name; if_rec; body } ->
       MFuncImpRaw { name = name#=>f; if_rec; body = typed_map_raw_term f body }
   | MFuncImp { name; if_rec; body } ->

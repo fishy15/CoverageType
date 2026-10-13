@@ -410,27 +410,26 @@ let denormalize_structure = List.map denormalize_item
 
 open Typectx
 
-let rty_add_to_right { builtin_ctx; cur_axiom_names } x =
-  { builtin_ctx = add_to_right builtin_ctx x; cur_axiom_names }
+let rty_add_to_right { builtin_ctx; gated_axioms; cur_axiom_names } x =
+  { builtin_ctx = add_to_right builtin_ctx x; gated_axioms; cur_axiom_names }
 
-let axiom_add_to_right { builtin_ctx; cur_axiom_names } (x, prop) =
+let axiom_add_to_right { builtin_ctx; gated_axioms; cur_axiom_names } (x, axiom)
+    =
   if List.exists (String.equal x) cur_axiom_names then _die [%here]
   else
-    let () = Prop.Prover.update_axioms [ (x, prop) ] in
-    { builtin_ctx; cur_axiom_names = cur_axiom_names @ [ x ] }
+    let cur_axiom_names = cur_axiom_names @ [ x ] in
+    match axiom with
+    | Plain prop ->
+        let () = Prop.Prover.update_axioms [ (x, prop) ] in
+        { builtin_ctx; gated_axioms; cur_axiom_names }
+    | Gated prop ->
+        let gated_axioms = StrMap.add x prop gated_axioms in
+        { builtin_ctx; gated_axioms; cur_axiom_names }
 
-let rty_add_to_rights { builtin_ctx; cur_axiom_names } x =
-  { builtin_ctx = add_to_rights builtin_ctx x; cur_axiom_names }
+let rty_add_to_rights { builtin_ctx; gated_axioms; cur_axiom_names } x =
+  { builtin_ctx = add_to_rights builtin_ctx x; gated_axioms; cur_axiom_names }
 
-let axiom_add_to_rights { builtin_ctx; cur_axiom_names } xs =
-  if List.exists (fun (x, _) -> List.exists (String.equal x) cur_axiom_names) xs
-  then _die [%here]
-  else
-    let () = Prop.Prover.update_axioms xs in
-    {
-      builtin_ctx;
-      cur_axiom_names = cur_axiom_names @ List.map (fun (x, _) -> x) xs;
-    }
+let axiom_add_to_rights bctx xs = List.fold_left axiom_add_to_right bctx xs
 
 (** Monad *)
 

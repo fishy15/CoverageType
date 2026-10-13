@@ -1,4 +1,5 @@
 open Zutils
+open Zdatatype
 open Prop
 open Sexplib.Std
 
@@ -6,6 +7,10 @@ let _return = "return"
 let _bind = "bind"
 let _fmap = "fmap"
 let stat_file = "/tmp/coverage_type_stat.json"
+
+(* assume gated axioms are gated by their first parameter *)
+type 't axiom = Plain of 't prop | Gated of 't prop
+[@@deriving eq, ord, show, sexp]
 
 type 't value =
   | VConst of constant
@@ -133,7 +138,7 @@ type 't item =
     }
   | MValDecl of ('t, string) typed
   | MMethodPred of ('t, string) typed
-  | MAxiom of { name : string; prop : 't prop }
+  | MAxiom of { name : string; axiom : 't axiom }
   | MFuncImpRaw of {
       name : ('t, string) typed;
       if_rec : bool;
@@ -159,6 +164,7 @@ open Typectx
 
 type built_in_ctx = {
   builtin_ctx : Nt.nt rty ctx;
+  gated_axioms : Nt.t prop StrMap.t;
   cur_axiom_names : string list;
 }
 

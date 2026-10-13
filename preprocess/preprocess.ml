@@ -1,6 +1,7 @@
 include Basic_typing
 include Normalization
 open Language
+open Zdatatype
 open Zutils
 
 let parse file =
@@ -42,7 +43,9 @@ let load_ctxs () =
         Typectx.add_to_rights (struct_mk_rty_ctx items) builtin_rty_ctx
       in
       let axioms = struct_mk_axiom_ctx items in
-      let bctx = { builtin_ctx; cur_axiom_names = [] } in
+      let bctx =
+        { builtin_ctx; gated_axioms = StrMap.empty; cur_axiom_names = [] }
+      in
       let bctx = axiom_add_to_rights bctx axioms in
       let res = (alias, basic_ctx, bctx) in
       _ctxs := Some res;

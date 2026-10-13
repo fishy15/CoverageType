@@ -119,12 +119,16 @@ let rec fv_rty (rty_e : 't rty) =
 
 and typed_fv_rty (rty_e : ('t, 't rty) typed) = fv_rty rty_e.x
 
+let fv_axiom = function
+  | Plain prop -> fv_prop prop
+  | Gated prop -> fv_prop prop
+
 let rec fv_item (item_e : 't item) =
   match item_e with
   | MTyDecl _ -> []
   | MValDecl _ -> []
   | MMethodPred _ -> []
-  | MAxiom { prop; _ } -> fv_prop prop
+  | MAxiom { axiom; _ } -> fv_axiom axiom
   | MFuncImpRaw { body; _ } -> typed_fv_raw_term body
   | MFuncImp { body; _ } -> typed_fv_term body
   | MRty { rty; _ } -> fv_rty rty
