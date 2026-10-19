@@ -262,10 +262,6 @@ let item_erase (e : 'a item) =
   | MRty { name; rty; _ } -> MValDecl name#:(Some (erase_rty rty))
   | _ -> e
 
-let axiom_type_check ctx poly_vars = function
-  | Plain prop -> Plain (prop_type_check ctx poly_vars prop)
-  | Gated prop -> Gated (prop_type_check ctx poly_vars prop)
-
 let item_check (checked : t item list) ctx (e : t item) : t ctx * t item =
   match e with
   | MTyDecl { type_name; type_params; type_decl = Decl_constructors fds } ->
@@ -287,8 +283,12 @@ let item_check (checked : t item list) ctx (e : t item) : t ctx * t item =
       let x = Nt.__force_typed [%here] x in
       let res = MMethodPred x in
       (add_to_right ctx x, res)
-  | MAxiom { name; axiom } ->
-      (ctx, MAxiom { name; axiom = axiom_type_check ctx [ "a" ] axiom })
+  | MAxiom { name; prop } ->
+      (ctx, MAxiom { name; prop = prop_type_check ctx [ "a" ] prop })
+  | MGatedAxiom { name; axiom } ->
+      let prop = gated_axiom_to_prop axiom in
+      let prop = prop_type_check ctx [ "a" ] prop in
+      (ctx, MGatedAxiom { name; axiom = gated_axiom_of_prop prop })
   | MLocalRty { host_name; name; rty; captured } ->
       let host_rty =
         List.filter_map
@@ -343,7 +343,7 @@ let struct_mk_rty_ctx l =
 
 let struct_mk_axiom_ctx l =
   let aux res = function
-    | MAxiom { name; axiom } -> res @ [ (name, axiom) ]
+    | MAxiom { name; prop } -> res @ [ (name, prop) ]
     | _ -> res
   in
   List.fold_left aux [] l

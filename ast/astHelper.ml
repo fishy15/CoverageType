@@ -418,13 +418,16 @@ let axiom_add_to_right { builtin_ctx; gated_axioms; cur_axiom_names } (x, axiom)
   if List.exists (String.equal x) cur_axiom_names then _die [%here]
   else
     let cur_axiom_names = cur_axiom_names @ [ x ] in
-    match axiom with
-    | Plain prop ->
-        let () = Prop.Prover.update_axioms [ (x, prop) ] in
-        { builtin_ctx; gated_axioms; cur_axiom_names }
-    | Gated prop ->
-        let gated_axioms = StrMap.add x prop gated_axioms in
-        { builtin_ctx; gated_axioms; cur_axiom_names }
+    let () = Prop.Prover.update_axioms [ (x, axiom) ] in
+    { builtin_ctx; gated_axioms; cur_axiom_names }
+
+let gated_axiom_add_to_right { builtin_ctx; gated_axioms; cur_axiom_names }
+    (x, axiom) =
+  if List.exists (String.equal x) cur_axiom_names then _die [%here]
+  else
+    let cur_axiom_names = cur_axiom_names @ [ x ] in
+    let gated_axioms = StrMap.add x axiom gated_axioms in
+    { builtin_ctx; gated_axioms; cur_axiom_names }
 
 let rty_add_to_rights { builtin_ctx; gated_axioms; cur_axiom_names } x =
   { builtin_ctx = add_to_rights builtin_ctx x; gated_axioms; cur_axiom_names }

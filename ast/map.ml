@@ -150,10 +150,12 @@ let rec map_rty (f : 't -> 's) (rty_e : 't rty) =
 and typed_map_rty (f : 't -> 's) (rty_e : ('t, 't rty) typed) =
   rty_e#=>f#->(map_rty f)
 
-let map_axiom (f : 't -> 's) (axiom_e : 't axiom) =
-  match axiom_e with
-  | Plain prop -> Plain (map_prop f prop)
-  | Gated prop -> Gated (map_prop f prop)
+let map_gated_axiom (f : 't -> 's) (gated_axiom_e : 't gated_axiom) =
+  let { inputs; output; phi } = gated_axiom_e in
+  let inputs = List.map (fun x -> x#=>f) inputs in
+  let output = output#=>f in
+  let phi = map_prop f phi in
+  { inputs; output; phi }
 
 let rec map_item (f : 't -> 's) (item_e : 't item) =
   match item_e with
@@ -161,7 +163,9 @@ let rec map_item (f : 't -> 's) (item_e : 't item) =
       MTyDecl { type_name; type_params; type_decl }
   | MValDecl _t_stringtyped0 -> MValDecl _t_stringtyped0#=>f
   | MMethodPred _t_stringtyped0 -> MMethodPred _t_stringtyped0#=>f
-  | MAxiom { name; axiom } -> MAxiom { name; axiom = map_axiom f axiom }
+  | MAxiom { name; prop } -> MAxiom { name; prop = map_prop f prop }
+  | MGatedAxiom { name; axiom } ->
+      MGatedAxiom { name; axiom = map_gated_axiom f axiom }
   | MFuncImpRaw { name; if_rec; body } ->
       MFuncImpRaw { name = name#=>f; if_rec; body = typed_map_raw_term f body }
   | MFuncImp { name; if_rec; body } ->

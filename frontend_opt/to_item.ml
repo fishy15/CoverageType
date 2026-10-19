@@ -9,6 +9,7 @@ open Ast
 open Sugar
 open To_rty
 open To_raw_term
+open To_gated_axiom
 open Common
 
 (* NOTE: The top level normal type need to be closed by Nt.close_poly_nt *)
@@ -33,18 +34,18 @@ let ocaml_structure_item_to_item ~record_fields structure =
          match value_binding.pvb_attributes with
          | [ x ] -> (
              match x.attr_name.txt with
-             | "axiom" | "gated-axiom" -> (
-                 let axiom_of_prop p =
-                   if String.equal x.attr_name.txt "axiom" then Plain p
-                   else Gated p
-                 in
+             | "axiom" -> (
                  match x.attr_payload with
                  | PStr [] ->
-                     MAxiom
+                     MAxiom { name; prop = prop_of_expr value_binding.pvb_expr }
+                 | _ -> _die [%here])
+             | "gated-axiom" -> (
+                 match x.attr_payload with
+                 | PStr [] ->
+                     MGatedAxiom
                        {
                          name;
-                         axiom =
-                           axiom_of_prop (prop_of_expr value_binding.pvb_expr);
+                         axiom = gated_axiom_of_expr value_binding.pvb_expr;
                        }
                  | _ -> _die [%here])
              | "assert" -> (
@@ -123,10 +124,9 @@ let layout_item = function
   | MTyDecl _ as item -> To_type_dec.layout_type_dec item
   | MMethodPred x -> spf "val[@method_predicate] %s: %s" x.x @@ Nt.layout x.ty
   | MValDecl x -> spf "val %s: %s" x.x @@ Nt.layout x.ty
-  | MAxiom { name; axiom = Plain prop } ->
-      spf "let[@axiom] %s = %s" name (layout_prop prop)
-  | MAxiom { name; axiom = Gated prop } ->
-      spf "let[@gated-axiom] %s = %s" name (layout_prop prop)
+  | MAxiom { name; prop } -> spf "let[@axiom] %s = %s" name (layout_prop prop)
+  | MGatedAxiom { name; axiom } ->
+      spf "let[@gated-axiom] %s = %s" name (layout_gated_axiom axiom)
   | MFuncImpRaw { name; if_rec; body } ->
       spf "let %s%s : %s ? %s = %s"
         (if if_rec then "rec " else "")

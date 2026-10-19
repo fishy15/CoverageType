@@ -4,3 +4,4 @@ include To_rty
 include To_type_dec
 include To_judgement
 include To_item
+include To_gated_axiom

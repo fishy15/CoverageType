@@ -119,16 +119,18 @@ let rec fv_rty (rty_e : 't rty) =
 
 and typed_fv_rty (rty_e : ('t, 't rty) typed) = fv_rty rty_e.x
 
-let fv_axiom = function
-  | Plain prop -> fv_prop prop
-  | Gated prop -> fv_prop prop
+let fv_gated_axiom (gated_axiom_e : 't gated_axiom) =
+  let { inputs; output; phi } = gated_axiom_e in
+  let fvs = fv_prop phi in
+  Zdatatype.List.substract (typed_eq String.equal) (output :: inputs) fvs
 
 let rec fv_item (item_e : 't item) =
   match item_e with
   | MTyDecl _ -> []
   | MValDecl _ -> []
   | MMethodPred _ -> []
-  | MAxiom { axiom; _ } -> fv_axiom axiom
+  | MAxiom { prop; _ } -> fv_prop prop
+  | MGatedAxiom { axiom; _ } -> fv_gated_axiom axiom
   | MFuncImpRaw { body; _ } -> typed_fv_raw_term body
   | MFuncImp { body; _ } -> typed_fv_term body
   | MRty { rty; _ } -> fv_rty rty

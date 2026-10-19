@@ -48,6 +48,7 @@ let item_mk_type_alias_ctx items =
     | MValDecl _ -> []
     | MMethodPred _ -> []
     | MAxiom _ -> []
+    | MGatedAxiom _ -> []
     | MRty _ -> []
     | MLocalRty _ -> []
     | MFuncImpRaw _ | MFuncImp _ -> []
@@ -95,8 +96,10 @@ let item_inline decls items =
         Some res
     | MValDecl x -> Some (MValDecl x#=>inline)
     | MMethodPred x -> Some (MMethodPred x#=>inline)
-    | MAxiom { name; axiom } ->
-        Some (MAxiom { name; axiom = map_axiom inline axiom })
+    | MAxiom { name; prop } ->
+        Some (MAxiom { name; prop = map_prop inline prop })
+    | MGatedAxiom { name; axiom } ->
+        Some (MGatedAxiom { name; axiom = map_gated_axiom inline axiom })
     | MLocalRty { host_name; name; rty; captured } ->
         let rty = map_rty inline rty in
         Some (MLocalRty { host_name; name; rty; captured })

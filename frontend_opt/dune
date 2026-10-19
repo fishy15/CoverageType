@@ -11,6 +11,7 @@
   to_type_dec
   to_judgement
   to_item
+  to_gated_axiom
   frontend_opt)
  (preprocess
   (pps

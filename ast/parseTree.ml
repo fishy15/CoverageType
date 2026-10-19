@@ -8,8 +8,11 @@ let _bind = "bind"
 let _fmap = "fmap"
 let stat_file = "/tmp/coverage_type_stat.json"
 
-(* assume gated axioms are gated by their first parameter *)
-type 't axiom = Plain of 't prop | Gated of 't prop
+type 't gated_axiom = {
+  inputs : ('t, string) typed list;
+  output : ('t, string) typed;
+  phi : 't prop;
+}
 [@@deriving eq, ord, show, sexp]
 
 type 't value =
@@ -138,7 +141,8 @@ type 't item =
     }
   | MValDecl of ('t, string) typed
   | MMethodPred of ('t, string) typed
-  | MAxiom of { name : string; axiom : 't axiom }
+  | MAxiom of { name : string; prop : 't prop }
+  | MGatedAxiom of { name : string; axiom : 't gated_axiom }
   | MFuncImpRaw of {
       name : ('t, string) typed;
       if_rec : bool;
