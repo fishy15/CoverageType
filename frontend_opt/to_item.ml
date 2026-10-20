@@ -39,7 +39,7 @@ let ocaml_structure_item_to_item ~record_fields structure =
                  | PStr [] ->
                      MAxiom { name; prop = prop_of_expr value_binding.pvb_expr }
                  | _ -> _die [%here])
-             | "gated-axiom" -> (
+             | "gated" -> (
                  match x.attr_payload with
                  | PPat (pat, None) ->
                      let measure = id_of_pattern pat in

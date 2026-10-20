@@ -3,11 +3,12 @@ open Prop
 open Sugar
 
 let gated_axiom_of_prop ~measure prop =
-  let rec aux = function
+  let rec aux p =
+    match p with
     | Forall { qv; body } ->
         let inps, retty = aux body in
         (qv :: inps, retty)
-    | _ -> ([], prop)
+    | _ -> ([], p)
   in
   let inputs, prop = aux prop in
   let output, prop =
