@@ -434,6 +434,9 @@ let rty_add_to_rights { builtin_ctx; gated_axioms; cur_axiom_names } x =
 
 let axiom_add_to_rights bctx xs = List.fold_left axiom_add_to_right bctx xs
 
+let gated_axiom_add_to_rights bctx xs =
+  List.fold_left gated_axiom_add_to_right bctx xs
+
 (** Monad *)
 
 let ret_ty loc = function RtyArr { retty; _ } -> retty | _ -> _die loc

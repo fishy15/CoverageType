@@ -341,9 +341,16 @@ let struct_mk_rty_ctx l =
   in
   List.fold_left aux Typectx.emp l
 
-let struct_mk_axiom_ctx l =
+let struct_get_axioms l =
   let aux res = function
     | MAxiom { name; prop } -> res @ [ (name, prop) ]
+    | _ -> res
+  in
+  List.fold_left aux [] l
+
+let struct_get_gated_axioms l =
+  let aux res = function
+    | MGatedAxiom { name; axiom } -> res @ [ (name, axiom) ]
     | _ -> res
   in
   List.fold_left aux [] l

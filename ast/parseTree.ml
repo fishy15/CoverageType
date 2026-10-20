@@ -168,7 +168,7 @@ open Typectx
 
 type built_in_ctx = {
   builtin_ctx : Nt.nt rty ctx;
-  gated_axioms : Nt.t prop StrMap.t;
+  gated_axioms : Nt.t gated_axiom StrMap.t;
   cur_axiom_names : string list;
 }
 

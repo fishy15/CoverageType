@@ -42,11 +42,13 @@ let load_ctxs () =
       let builtin_ctx =
         Typectx.add_to_rights (struct_mk_rty_ctx items) builtin_rty_ctx
       in
-      let axioms = struct_mk_axiom_ctx items in
       let bctx =
         { builtin_ctx; gated_axioms = StrMap.empty; cur_axiom_names = [] }
       in
-      let bctx = axiom_add_to_rights bctx axioms in
+      let bctx = axiom_add_to_rights bctx (struct_get_axioms items) in
+      let bctx =
+        gated_axiom_add_to_rights bctx (struct_get_gated_axioms items)
+      in
       let res = (alias, basic_ctx, bctx) in
       _ctxs := Some res;
       res
