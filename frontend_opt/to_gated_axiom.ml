@@ -2,7 +2,7 @@ open Ast
 open Prop
 open Sugar
 
-let gated_axiom_of_prop prop =
+let gated_axiom_of_prop ~measure prop =
   let rec aux = function
     | Forall { qv; body } ->
         let inps, retty = aux body in
@@ -19,13 +19,13 @@ let gated_axiom_of_prop prop =
     "gated axiom should be some inputs (forall) followed by one output \
      (exists) only"
     (not (has_quantifiers prop));
-  { inputs; output; phi = prop }
+  { measure; inputs; output; phi = prop }
 
-let gated_axiom_of_expr expr =
+let gated_axiom_of_expr ~measure expr =
   let prop = prop_of_expr expr in
-  gated_axiom_of_prop prop
+  gated_axiom_of_prop ~measure prop
 
-let gated_axiom_to_prop { inputs; output; phi } =
+let gated_axiom_to_prop { inputs; output; phi; _ } =
   Exists { qv = output; body = phi }
   |> List.fold_right (fun qv acc -> Forall { qv; body = acc }) inputs
 

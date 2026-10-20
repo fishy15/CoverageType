@@ -120,7 +120,7 @@ let rec fv_rty (rty_e : 't rty) =
 and typed_fv_rty (rty_e : ('t, 't rty) typed) = fv_rty rty_e.x
 
 let fv_gated_axiom (gated_axiom_e : 't gated_axiom) =
-  let { inputs; output; phi } = gated_axiom_e in
+  let { inputs; output; phi; _ } = gated_axiom_e in
   let fvs = fv_prop phi in
   Zdatatype.List.substract (typed_eq String.equal) (output :: inputs) fvs
 
