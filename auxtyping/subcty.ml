@@ -132,7 +132,7 @@ let strict_non_emptiness_cty bctx rctx measure_arg cty =
     assert_cty_closed_under_ctx [%here] overctx underctx cty
   in
   let query =
-    gate_with_axioms bctx ~measure:"measure" ~measure_arg ~vty:cty.nty cty.phi
+    gate_with_axioms bctx ~measure_arg ~vty:cty.nty cty.phi
     |> List.fold_right smart_dependent_forall (overctx @ underctx)
   in
   let () = Statistic.stat_query_formula (rctx.task_name, query) in

@@ -286,10 +286,9 @@ let item_check (checked : t item list) ctx (e : t item) : t ctx * t item =
   | MAxiom { name; prop } ->
       (ctx, MAxiom { name; prop = prop_type_check ctx [ "a" ] prop })
   | MGatedAxiom { name; axiom } ->
-      let { measure; _ } = axiom in
       let prop = gated_axiom_to_prop axiom in
       let prop = prop_type_check ctx [ "a" ] prop in
-      (ctx, MGatedAxiom { name; axiom = gated_axiom_of_prop ~measure prop })
+      (ctx, MGatedAxiom { name; axiom = gated_axiom_of_prop prop })
   | MLocalRty { host_name; name; rty; captured } ->
       let host_rty =
         List.filter_map

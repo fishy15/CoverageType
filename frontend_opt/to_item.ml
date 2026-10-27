@@ -41,13 +41,11 @@ let ocaml_structure_item_to_item ~record_fields structure =
                  | _ -> _die [%here])
              | "gated" -> (
                  match x.attr_payload with
-                 | PPat (pat, None) ->
-                     let measure = id_of_pattern pat in
+                 | PStr [] ->
                      MGatedAxiom
                        {
                          name;
-                         axiom =
-                           gated_axiom_of_expr ~measure value_binding.pvb_expr;
+                         axiom = gated_axiom_of_expr value_binding.pvb_expr;
                        }
                  | _ -> _die [%here])
              | "assert" -> (
@@ -128,9 +126,7 @@ let layout_item = function
   | MValDecl x -> spf "val %s: %s" x.x @@ Nt.layout x.ty
   | MAxiom { name; prop } -> spf "let[@axiom] %s = %s" name (layout_prop prop)
   | MGatedAxiom { name; axiom } ->
-      let { measure; _ } = axiom in
-      spf "let[@gated-axiom ? %s] %s = %s" measure name
-        (layout_gated_axiom axiom)
+      spf "let[@gated] %s = %s" name (layout_gated_axiom axiom)
   | MFuncImpRaw { name; if_rec; body } ->
       spf "let %s%s : %s ? %s = %s"
         (if if_rec then "rec " else "")

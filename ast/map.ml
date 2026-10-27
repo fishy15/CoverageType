@@ -151,11 +151,11 @@ and typed_map_rty (f : 't -> 's) (rty_e : ('t, 't rty) typed) =
   rty_e#=>f#->(map_rty f)
 
 let map_gated_axiom (f : 't -> 's) (gated_axiom_e : 't gated_axiom) =
-  let { measure; inputs; output; phi } = gated_axiom_e in
+  let { inputs; output; phi } = gated_axiom_e in
   let inputs = List.map (fun x -> x#=>f) inputs in
   let output = output#=>f in
   let phi = map_prop f phi in
-  { measure; inputs; output; phi }
+  { inputs; output; phi }
 
 let rec map_item (f : 't -> 's) (item_e : 't item) =
   match item_e with

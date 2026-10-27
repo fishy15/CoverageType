@@ -9,7 +9,6 @@ let _fmap = "fmap"
 let stat_file = "/tmp/coverage_type_stat.json"
 
 type 't gated_axiom = {
-  measure : string;
   inputs : ('t, string) typed list;
   output : ('t, string) typed;
   phi : 't prop;

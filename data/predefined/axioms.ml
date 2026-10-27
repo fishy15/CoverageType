@@ -942,7 +942,7 @@ let[@axiom] Herdtool7_literal =
 (*     (tau : stlc_ty) = *)
 (*   (is_const v && typing gamma v tau)#==>(stlc_ty_nat tau) *)
 
-let[@gated? measure] list_cons =
+let[@gated] list_cons =
  fun (h : int) (t : int list) ((l [@ex]) : int list) -> hd l h && tl l t
 
 let[@axiom] list_measure = fun (l : int list) -> measure l == list_len l
