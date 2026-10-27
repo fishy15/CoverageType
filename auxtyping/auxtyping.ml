@@ -1,3 +1,4 @@
+include Gated
 include Subcty
 include Subrty
 include Tyfunc

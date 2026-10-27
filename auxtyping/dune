@@ -3,7 +3,7 @@
  (name auxtyping)
  (wrapped true)
  (libraries core zutils language statistic CoverageType.typechecker_config)
- (modules subcty subrty tyfunc wellfound auxtyping)
+ (modules gated subcty subrty tyfunc wellfound auxtyping)
  (preprocess
   (pps
    ppx_optcomp
