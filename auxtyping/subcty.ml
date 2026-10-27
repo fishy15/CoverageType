@@ -99,13 +99,10 @@ let sub_cty ou rctx cty1 cty2 =
   let () = Statistic.stat_query_time (rctx.task_name, time) in
   res
 
-(* NOTE: after exists the constraints into the return type, the emptiness can be checked final stage;
-   It may cause the more branch analysis.
-*)
 let lazy_emptiness_check = false
 
 let non_emptiness_cty rctx cty =
-  if lazy_emptiness_check then true
+  if TypecheckerConfig.lazy_emptiness_check () then true
   else
     let ctx_list = Typectx.ctx_to_list rctx.rty_ctx in
     let overctx, underctx = build_wf_ctx ctx_list in
