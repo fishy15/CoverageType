@@ -53,3 +53,32 @@ let non_emptiness_rty rctx rty =
   | RtyArr _ -> true
   | RtyPolyPred _ -> true
   | _ -> _failatwith [%here] "die"
+
+let strict_non_emptiness_rty bctx rctx rty =
+  ( TypecheckerLog.auxtyping @@ fun _ ->
+    Pp.printf "strict nonemptiness check: %s\n" (layout_rty rty) );
+  let rec aux measure_arg rctx rty =
+    match rty with
+    | RtyBase { ou = Under; cty } ->
+        let measure_arg =
+          match measure_arg with
+          | Some x -> x
+          | None -> _die_with [%here] "strict non-emptiness: no first argument"
+        in
+        let () = Statistic.stat_count_query rctx.task_name in
+        strict_non_emptiness_cty bctx rctx measure_arg cty
+    | RtyArr { arg; argrty; retty } -> (
+        match measure_arg with
+        | None -> aux (Some arg) rctx retty
+        | m ->
+            let rctx =
+              {
+                rctx with
+                rty_ctx = Typectx.add_to_right rctx.rty_ctx arg#:argrty;
+              }
+            in
+            aux m rctx retty)
+    | RtyPolyPred _ -> true
+    | _ -> _failatwith [%here] "die"
+  in
+  aux None rctx rty

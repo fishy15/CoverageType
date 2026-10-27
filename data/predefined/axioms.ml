@@ -585,12 +585,12 @@ let[@axiom] stlc_typing_abs_typing =
     (typing gamma' body tau)
 
 let[@axiom] stlc_typing =
- fun (measure : int) ->
+ fun (m : int) ->
+  (* measure *)
   fun (num : int) ->
    fun (tau : stlc_ty) (gamma : stlc_ty list) (v : stlc_term) ->
     implies
-      (stlc_measure tau num measure
-      && typing gamma v tau
+      (stlc_measure tau num m && typing gamma v tau
       && num_app v == num
       && num > 0)
       ( (fun ((func [@ex]) : stlc_term)
@@ -944,3 +944,5 @@ let[@axiom] Herdtool7_literal =
 
 let[@gated? measure] list_cons =
  fun (h : int) (t : int list) ((l [@ex]) : int list) -> hd l h && tl l t
+
+let[@axiom] list_measure = fun (l : int list) -> measure l == list_len l

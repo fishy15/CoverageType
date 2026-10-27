@@ -50,6 +50,7 @@ val dummy : unit
 (** Well-founded *)
 
 val decreasing : 'a -> 'a -> bool
+val measure : 'a -> int
 
 (** Datatypes and method predicates (needs to be stratificated) *)
 

@@ -2,6 +2,7 @@ open Language
 open Zutils
 open Prop
 open Zdatatype
+open Gated
 
 let smart_dependent_forall (x, { nty; phi }) query =
   let phi = subst_prop_instance default_v (AVar x#:nty) phi in
@@ -120,3 +121,25 @@ let non_emptiness_cty rctx cty =
     in
     let () = Statistic.stat_query_time (rctx.task_name, time) in
     res
+
+let strict_non_emptiness_cty bctx rctx measure_arg cty =
+  (TypecheckerLog.auxtyping @@ fun _ -> Pp.printf "strict check:\n");
+  let ctx_list = Typectx.ctx_to_list rctx.rty_ctx in
+  let overctx, underctx = build_wf_ctx ctx_list in
+  _log_context ctx_list overctx underctx;
+  let () =
+    let overctx = overctx @ [ (measure_arg, mk_top_cty Nt.int_ty) ] in
+    assert_cty_closed_under_ctx [%here] overctx underctx cty
+  in
+  let query =
+    gate_with_axioms bctx ~measure:"measure" ~measure_arg ~vty:cty.nty cty.phi
+    |> List.fold_right smart_dependent_forall (overctx @ underctx)
+  in
+  let () = Statistic.stat_query_formula (rctx.task_name, query) in
+  let time, res =
+    clock (fun () ->
+        _log_valid_query query;
+        Prover.check_valid_bool [%here] query ~coerce_to:false)
+  in
+  let () = Statistic.stat_query_time (rctx.task_name, time) in
+  res

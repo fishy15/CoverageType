@@ -144,6 +144,10 @@ let type_check_group (bctx : built_in_ctx) =
         Some (VLam { lamarg; body })#:(RtyArr { argrty; arg; retty })
     | VLam _, _ -> _die [%here]
     | VFix { fixname; fixarg; body }, RtyArr { argrty; arg; retty } ->
+        if not (strict_non_emptiness_rty bctx rctx rty) then (
+          _warinning_nonemptiness_error [%here] rty;
+          None)
+        else
         (* NOTE: we force the first argument to be the decreasing argument *)
         let measure_cty =
           match argrty with

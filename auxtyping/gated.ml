@@ -3,8 +3,6 @@ open Prop
 open Sugar
 open Zdatatype
 
-let measure_var = "_sz"
-
 let is_relevant_axiom { measure = m; output; _ } ~measure ~ty =
   String.equal measure m && Nt.equal_nt output.ty ty
 
@@ -42,21 +40,23 @@ let geq_zero v =
   cmp `Geq v_lit zero
 
 let assume_smaller_exist_prop measure vty prop bound_var =
-  let bound_var' = Rename.unique_var measure_var in
+  let smaller_bound_var, prop = freshen_prop_instance bound_var prop in
   let v, prop = freshen_prop_typed_instance default_v#:vty prop in
-  let prop = smart_and [ bound_v_by_sz `Eq measure v bound_var'; prop ] in
+  let prop =
+    smart_and [ bound_v_by_sz `Eq measure v smaller_bound_var; prop ]
+  in
   fresh_name_prop
   @@ smart_forall_phi
-       ( bound_var'#:Nt.int_ty,
+       ( smaller_bound_var#:Nt.int_ty,
          smart_and
            [
-             geq_zero bound_var';
-             cmp `Lt (int_var bound_var') (int_var bound_var);
+             geq_zero smaller_bound_var;
+             cmp `Lt (int_var smaller_bound_var) (int_var bound_var);
            ] )
        (Exists { qv = v; body = prop })
 
-let gate_with_axioms bctx prop ~measure ~vty =
-  let bound_var = Rename.unique_var measure_var in
+let gate_with_axioms bctx prop ~measure ~measure_arg ~vty =
+  let bound_var, prop = freshen_prop_instance measure_arg prop in
   let axioms =
     get_relevant_gated_axioms bctx ~measure ~ty:vty
     |> List.map (fun (_, ax) -> instantiate_gated_axiom ax bound_var)
