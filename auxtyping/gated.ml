@@ -45,13 +45,15 @@ let assume_smaller_exist_prop measure vty prop bound_var =
   let bound_var' = Rename.unique_var measure_var in
   let v, prop = freshen_prop_typed_instance default_v#:vty prop in
   let prop = smart_and [ bound_v_by_sz `Eq measure v bound_var'; prop ] in
-  smart_forall_phi
-    ( bound_var'#:Nt.int_ty,
-      smart_and
-        [
-          geq_zero bound_var'; cmp `Lt (int_var bound_var') (int_var bound_var);
-        ] )
-    (Exists { qv = v; body = prop })
+  fresh_name_prop
+  @@ smart_forall_phi
+       ( bound_var'#:Nt.int_ty,
+         smart_and
+           [
+             geq_zero bound_var';
+             cmp `Lt (int_var bound_var') (int_var bound_var);
+           ] )
+       (Exists { qv = v; body = prop })
 
 let gate_with_axioms bctx prop ~measure ~vty =
   let bound_var = Rename.unique_var measure_var in
@@ -61,6 +63,7 @@ let gate_with_axioms bctx prop ~measure ~vty =
   in
   let smaller_prop = assume_smaller_exist_prop measure vty prop bound_var in
   let v, prop = freshen_prop_typed_instance default_v#:vty prop in
+  let prop = fresh_name_prop prop in
   let bound_v = bound_v_by_sz `Eq measure v bound_var in
   let prop = smart_exists_phi (v, bound_v) prop in
   let prop = smart_implies (smart_and (smaller_prop :: axioms)) prop in
