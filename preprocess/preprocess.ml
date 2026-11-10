@@ -1,5 +1,6 @@
 include Basic_typing
 include Normalization
+module Duplication = Duplication
 open Language
 open Zdatatype
 open Zutils

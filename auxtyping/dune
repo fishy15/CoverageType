@@ -2,7 +2,8 @@
  (public_name CoverageType.auxtyping)
  (name auxtyping)
  (wrapped true)
- (libraries core zutils language statistic CoverageType.typechecker_config)
+ (libraries core zutils language statistic CoverageType.typechecker_config
+  CoverageType.preprocess)
  (modules gated subcty subrty tyfunc wellfound auxtyping)
  (preprocess
   (pps

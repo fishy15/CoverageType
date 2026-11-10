@@ -131,9 +131,10 @@ let strict_non_emptiness_cty bctx rctx measure_arg cty =
     let overctx = overctx @ [ (measure_arg, mk_top_cty Nt.int_ty) ] in
     assert_cty_closed_under_ctx [%here] overctx underctx cty
   in
+  let ctx = level0_ctx ~vty:cty.nty (overctx @ underctx) in
   let query =
     gate_with_axioms bctx ~measure_arg ~vty:cty.nty cty.phi
-    |> List.fold_right smart_dependent_forall (overctx @ underctx)
+    |> List.fold_right smart_dependent_forall ctx
   in
   let () = Statistic.stat_query_formula (rctx.task_name, query) in
   let time, res =
