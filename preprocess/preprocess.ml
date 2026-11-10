@@ -45,7 +45,11 @@ let load_ctxs () =
       let bctx =
         { builtin_ctx; gated_axioms = StrMap.empty; cur_axiom_names = [] }
       in
-      let bctx = axiom_add_to_rights bctx (struct_get_axioms items) in
+      let axioms = struct_get_axioms items in
+      let axioms =
+        axioms @ List.concat_map Duplication.duplicate_axiom axioms
+      in
+      let bctx = axiom_add_to_rights bctx axioms in
       let bctx =
         gated_axiom_add_to_rights bctx (struct_get_gated_axioms items)
       in
