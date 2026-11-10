@@ -143,12 +143,18 @@ let[@axiom] list_tl_unique =
 
 let[@axiom] list_len_geq_zero = fun (l : 'a list) -> list_len l >= 0
 
+let[@axiom] list_empty_no_mem =
+  fun (l : 'a list) (v : 'a) -> (list_len l == 0)#==>(not (list_mem l v))
+
+let[@axiom] empty_exists =
+  fun ((nil [@ex]) : 'a list) -> list_len nil == 0
+
 (* let[@axiom] list_len_geq_zero_implies_list_ex = *)
 (*  fun (n : int) -> (0 <= n) #==> (fun ((l [@ex]) : 'a list) -> list_len l == n) *)
 
-let[@axiom] int_list_ex_0_9 =
- fun ((l0 [@ex]) : int list) ((l1 [@ex]) : int list) ((l2 [@ex]) : int list) ->
-  tl l2 l1 && tl l1 l0 && list_len l0 == 0 && hd l1 1 && hd l2 9
+(* let[@axiom] int_list_ex_0_9 = *)
+(*  fun ((l0 [@ex]) : int list) ((l1 [@ex]) : int list) ((l2 [@ex]) : int list) -> *)
+(*   tl l2 l1 && tl l1 l0 && list_len l0 == 0 && hd l1 1 && hd l2 9 *)
 
 (** List :: uniq *)
 
@@ -202,9 +208,21 @@ let[@axiom] tree_ch_no_leaf (l : int tree) (l1 : int tree) =
 let[@axiom] tree_depth_geq_0 (l : int tree) (n : int) =
   (depth l == n)#==>(n >= 0)
 
-let[@axiom] tree_ch_depth_minus_1 (l : int tree) (l1 : int tree) (n : int)
-    (n1 : int) =
-  (lch l l1 || rch l l1)#==>(depth l1 <= depth l - 1)
+let[@axiom] tree_ch_depth_minus_1 (t : int tree) (l : int tree) (r : int tree) =
+  (lch t l && rch t r)#==>((depth t == depth l + 1 || depth t == depth r + 1)
+                          && depth t > depth l
+                          && depth t > depth r)
+
+let[@axiom] leaf_count_base =
+ fun (t : int tree) -> iff (depth t == 0) (tree_num_leaf t == 1)
+
+let[@axiom] leaf_count_step =
+ fun (t : int tree) (lt : int tree) (rt : int tree) ->
+  (lch t lt && rch t rt)#==>(tree_num_leaf t
+                            == tree_num_leaf lt + tree_num_leaf rt)
+
+let[@axiom] tree_leaf_exists =
+  fun ((t [@ex]) : 'a tree) -> depth t == 0
 
 (** tree_mem *)
 
@@ -946,3 +964,9 @@ let[@gated] list_cons =
  fun (h : int) (t : int list) ((l [@ex]) : int list) -> hd l h && tl l t
 
 let[@axiom] list_measure = fun (l : int list) -> measure l == list_len l
+
+let[@gated] tree_cons =
+ fun (v : int) (lt : int tree) (rt : int tree) ((t [@ex]) : int tree) ->
+  root t v && lch t lt && rch t rt
+
+let[@axiom] tree_measure = fun (t : int tree) -> measure t == depth t
