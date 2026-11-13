@@ -111,10 +111,10 @@ let[@axiom] list_snd_mem_none_when_len_0 =
 let[@axiom] list_snd_mem_implies_len_gt_zero =
  fun (l : (int * 'a) list) (v : 'a) -> (list_snd_mem l v)#==>(list_len l > 0)
 
-let[@axiom] list_len_gt_zero_implies_has_hd_tl =
- fun (l : 'a list) ->
-  (list_len l > 0) #==> (fun ((hde [@ex]) : 'a) ((tle [@ex]) : 'a list) ->
-  hd l hde && tl l tle)
+(* let[@axiom] list_len_gt_zero_implies_has_hd_tl = *)
+(*  fun (l : 'a list) -> *)
+(*   (list_len l > 0) #==> (fun ((hde [@ex]) : 'a) ((tle [@ex]) : 'a list) -> *)
+(*   hd l hde && tl l tle) *)
 
 let[@axiom] list_snd_mem_implies_snd_mem_hd_or_tl =
  fun (l : (int * 'a) list) (v : 'a) (hde : int * 'a) (tle : (int * 'a) list) ->
@@ -144,10 +144,9 @@ let[@axiom] list_tl_unique =
 let[@axiom] list_len_geq_zero = fun (l : 'a list) -> list_len l >= 0
 
 let[@axiom] list_empty_no_mem =
-  fun (l : 'a list) (v : 'a) -> (list_len l == 0)#==>(not (list_mem l v))
+ fun (l : 'a list) (v : 'a) -> (list_len l == 0)#==>(not (list_mem l v))
 
-let[@axiom] empty_exists =
-  fun ((nil [@ex]) : 'a list) -> list_len nil == 0
+let[@axiom] empty_exists = fun ((nil [@ex]) : 'a list) -> list_len nil == 0
 
 (* let[@axiom] list_len_geq_zero_implies_list_ex = *)
 (*  fun (n : int) -> (0 <= n) #==> (fun ((l [@ex]) : 'a list) -> list_len l == n) *)
@@ -221,8 +220,7 @@ let[@axiom] leaf_count_step =
   (lch t lt && rch t rt)#==>(tree_num_leaf t
                             == tree_num_leaf lt + tree_num_leaf rt)
 
-let[@axiom] tree_leaf_exists =
-  fun ((t [@ex]) : 'a tree) -> depth t == 0
+let[@axiom] tree_leaf_exists = fun ((t [@ex]) : 'a tree) -> depth t == 0
 
 (** tree_mem *)
 

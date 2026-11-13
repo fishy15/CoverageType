@@ -25,7 +25,7 @@ let subtype_check source_file () =
       (rty1, rty2) ()
   in
   let _ = Preprocess.load_bctx () in
-  let () = Statistic.create_subtyping_stat () in
+  let () = Statistic.create_empty_stat "subtyping" () in
   let res =
     Auxtyping.sub_rty (Typing.Rctx.emp "subtyping" [] []) (rty1, rty2)
   in
@@ -40,6 +40,20 @@ let type_check source_file () =
   let ok = List.is_empty failed in
   Pp.printf "@{<bold>Result: %b@}\n" ok;
   Stdlib.exit (if ok then 0 else 1)
+
+let strict_nonemptiness_check source_file () =
+  let code = Preprocess.preprocess [ source_file ] in
+  let _, rty = get_rty_by_name code "rty" in
+  let ctx = Typectx.emp in
+  let bctx = Preprocess.load_bctx () in
+  let () = Statistic.create_empty_stat "strict-nonemptiness" () in
+  let res =
+    Auxtyping.strict_non_emptiness_rty bctx
+      (Typing.Rctx.emp "strict-nonemptiness" [] [])
+      rty
+  in
+  Pp.printf "@{<bold>Result: %b@}\n" res;
+  Stdlib.exit (if res then 0 else 1)
 
 let one_param_file message f =
   let cmd =
@@ -62,6 +76,7 @@ let commands =
       one_param_file "print-source-code" print_source_code;
       one_param_file "subtype-check" subtype_check;
       one_param_file "type-check" type_check;
+      one_param_file "strict-nonemptiness" strict_nonemptiness_check;
     ]
 
 let () = Command_unix.run commands
