@@ -292,3 +292,13 @@ module Rty_source = struct
       (RtyPolyPred
          { pred = "p"#:(Nt.mk_arr Nt.int_ty Nt.bool_ty); rty = int_under })
 end
+
+let%test "strict nonemptiness: list cons" =
+  run_strict_nonemptiness_check ~expected:true "data/test_cases/list_cons.ml"
+
+let%test "strict nonemptiness: tree line" =
+  run_strict_nonemptiness_check ~expected:true "data/test_cases/tree_line.ml"
+
+let%test "strict nonemptiness: tree line with empty base case" =
+  run_strict_nonemptiness_check ~expected:false
+    "data/test_cases/tree_line_empty_base.ml"

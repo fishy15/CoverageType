@@ -44,7 +44,6 @@ let type_check source_file () =
 let strict_nonemptiness_check source_file () =
   let code = Preprocess.preprocess [ source_file ] in
   let _, rty = get_rty_by_name code "rty" in
-  let ctx = Typectx.emp in
   let bctx = Preprocess.load_bctx () in
   let () = Statistic.create_empty_stat "strict-nonemptiness" () in
   let res =
